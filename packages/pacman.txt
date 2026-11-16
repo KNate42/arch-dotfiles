@@ -1,0 +1,95 @@
+# Пакеты из официальных репозиториев (core, extra, multilib).
+# Имена сверены с archlinux.org/packages 16.11.2026.
+
+# База для сборки из AUR и для самих скриптов
+base-devel
+git
+stow
+rsync
+curl
+jq
+pciutils
+inotify-tools
+xdg-user-dirs
+
+# Hyprland и всё вокруг него
+hyprland
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+hyprpolkitagent
+hyprland-qt-support
+hyprlock
+hypridle
+qt5-wayland
+qt6-wayland
+
+# Панель, обои, цвета, лаунчер
+quickshell
+matugen
+awww
+rofi
+
+# Терминал и шелл
+kitty
+fish
+starship
+
+# Скриншоты, буфер обмена, уведомления
+grim
+slurp
+wl-clipboard
+cliphist
+libnotify
+
+# Темы, иконки, шрифты
+adw-gtk-theme
+qt6ct
+qt5ct
+nwg-look
+papirus-icon-theme
+ttf-jetbrains-mono-nerd
+noto-fonts
+noto-fonts-emoji
+noto-fonts-cjk
+
+# Звук, сеть, bluetooth
+pipewire
+pipewire-pulse
+pipewire-alsa
+wireplumber
+libpulse
+pavucontrol
+networkmanager
+bluez
+bluez-utils
+
+# Вход в систему
+sddm
+
+# Nvidia (GTX 1660 Super = Turing, открытые модули)
+nvidia-open-dkms
+nvidia-utils
+lib32-nvidia-utils
+nvidia-settings
+egl-wayland
+libva-nvidia-driver
+dkms
+
+# Разработка
+neovim
+docker
+docker-compose
+docker-buildx
+nodejs
+npm
+python
+python-pip
+postgresql
+rustup
+
+# Java: все поддерживаемые версии, по умолчанию 21 (переключение — archlinux-java)
+jdk-openjdk
+jdk21-openjdk
+jdk17-openjdk
+jdk11-openjdk
+jdk8-openjdk

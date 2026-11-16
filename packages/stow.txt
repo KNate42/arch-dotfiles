@@ -1,0 +1,12 @@
+# Пакеты GNU Stow, которые раскладываются в $HOME. Один каталог репо = один пакет.
+hypr
+quickshell
+kitty
+fish
+starship
+rofi
+matugen
+gtk
+nvim
+scripts
+vscode

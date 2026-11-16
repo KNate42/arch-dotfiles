@@ -1,0 +1,3 @@
+# Здесь я говорю shellcheck искать подключаемые файлы рядом с самим скриптом
+source-path=SCRIPTDIR
+external-sources=true

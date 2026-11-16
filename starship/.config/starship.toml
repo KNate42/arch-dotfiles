@@ -1,0 +1,40 @@
+# starship prompt config
+# This work made by Anfinogentov Nikita
+
+"$schema" = "https://starship.rs/config-schema.json"
+
+add_newline = true
+format = """
+$directory$git_branch$git_status$python$nodejs$rust$java$docker_context
+$character"""
+
+[directory]
+style = "bold blue"
+truncation_length = 3
+truncate_to_repo = true
+
+[git_branch]
+symbol = " "
+style = "bold purple"
+
+[git_status]
+style = "bold red"
+
+[python]
+symbol = " "
+
+[nodejs]
+symbol = " "
+
+[rust]
+symbol = " "
+
+[java]
+symbol = " "
+
+[docker_context]
+symbol = " "
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"

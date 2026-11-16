@@ -1,0 +1,4 @@
+# Singleton module definition for theme colors
+# This work made by Anfinogentov Nikita
+
+singleton Colors 1.0 Colors.qml

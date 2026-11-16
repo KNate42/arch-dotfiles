@@ -1,0 +1,16 @@
+// VS Code settings: telemetry, experiments and online recommendations are off
+// This work made by Anfinogentov Nikita
+{
+    // Здесь я выключаю телеметрию целиком: уровень "off" отключает и отчёты о сбоях
+    "telemetry.telemetryLevel": "off",
+    "workbench.enableExperiments": false,
+    "workbench.settings.enableNaturalLanguageSearch": false,
+    "extensions.ignoreRecommendations": true,
+    "npm.fetchOnlinePackageInfo": false,
+    "update.showReleaseNotes": false,
+
+    "editor.fontFamily": "'JetBrainsMono Nerd Font', monospace",
+    "editor.fontSize": 14,
+    "terminal.integrated.defaultProfile.linux": "fish",
+    "window.titleBarStyle": "custom"
+}

@@ -1,0 +1,78 @@
+/* rofi look; colors come from colors.rasi written by matugen */
+/* This work made by Anfinogentov Nikita */
+
+* {
+    bg: #111318e6;
+    bg-alt: #282a2f;
+    fg: #e2e2e9;
+    fg-alt: #c4c6d0;
+    accent: #aac7ff;
+    on-accent: #0a305f;
+    border-col: #44474e;
+}
+
+/* Здесь я подключаю палитру matugen поверх запасных цветов выше */
+@import "colors.rasi"
+
+* {
+    background-color: transparent;
+    text-color: @fg;
+}
+
+window {
+    width: 560px;
+    border: 2px;
+    border-color: @border-col;
+    border-radius: 14px;
+    background-color: @bg;
+    padding: 14px;
+}
+
+mainbox {
+    spacing: 10px;
+    children: [ inputbar, listview ];
+}
+
+inputbar {
+    padding: 10px 14px;
+    border-radius: 10px;
+    background-color: @bg-alt;
+    children: [ prompt, entry ];
+    spacing: 10px;
+}
+
+prompt {
+    text-color: @accent;
+}
+
+entry {
+    placeholder: "Search";
+    placeholder-color: @fg-alt;
+}
+
+listview {
+    lines: 8;
+    columns: 1;
+    fixed-height: false;
+    spacing: 4px;
+}
+
+element {
+    padding: 8px 12px;
+    border-radius: 10px;
+    spacing: 12px;
+}
+
+element selected {
+    background-color: @accent;
+    text-color: @on-accent;
+}
+
+element-icon {
+    size: 24px;
+}
+
+element-text {
+    text-color: inherit;
+    vertical-align: 0.5;
+}

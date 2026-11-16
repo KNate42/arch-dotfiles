@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Takes a screenshot of a selected area: saves it to ~/Pictures/Screenshots and copies to clipboard.
+# This work made by Anfinogentov Nikita
+
+set -euo pipefail
+
+shots_dir="$(xdg-user-dir PICTURES 2>/dev/null || printf '%s' "$HOME/Pictures")/Screenshots"
+mkdir -p "$shots_dir"
+
+# Здесь я тихо выхожу, если область не выбрали (Escape в slurp)
+if ! area="$(slurp -d)"; then
+    exit 0
+fi
+
+file="$shots_dir/$(date +%Y-%m-%d_%H-%M-%S).png"
+grim -g "$area" "$file"
+wl-copy --type image/png < "$file"
+notify-send -i "$file" "Screenshot" "Saved and copied: $(basename "$file")" || true

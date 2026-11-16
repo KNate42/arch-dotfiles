@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# Switches sound to the TV over HDMI and back. Called by Hyprland on TV hotplug.
+# Usage: tv-audio on | off
+# This work made by Anfinogentov Nikita
+
+set -euo pipefail
+# Здесь я выключаю перевод: pactl переводит поля вроде «not available», и сравнение с ними ломалось бы
+export LC_ALL=C
+
+state_dir="$HOME/.local/state/dots"
+saved_state_file="$state_dir/audio-before-tv"
+# tv_desc = начало описания ТВ, как в hypr/modules/monitors.lua
+tv_desc="Samsung Electric Company"
+# tv_audio_name = имя ТВ в описании HDMI-порта: PipeWire берёт его из EDID (ELD), например «HDMI / DisplayPort 2 (SAMSUNG)»
+tv_audio_name="samsung"
+
+oops() {
+    printf 'Ooops.. %s\n' "$*" >&2
+}
+
+# У видеокарты Nvidia один HDMI-выход на профиль карты: выход ТВ появляется только после смены профиля.
+# Поэтому ищу не выход, а порт карты с именем ТВ, и печатаю «карта порт профиль».
+find_tv_port() {
+    pactl -f json list cards | jq -r --arg tv "$tv_audio_name" '
+        [ .[] | .name as $card
+              | (.ports // [])[]
+              | select((.description | ascii_downcase | contains($tv)) and .availability != "not available")
+              | . as $port
+              | ([ ($port.profiles // [])[] | select(startswith("output:hdmi")) ] | .[0]) as $profile
+              | select($profile != null)
+              | "\($card) \($port.name) \($profile)" ]
+        | .[0] // empty'
+}
+
+active_profile() {
+    pactl -f json list cards | jq -r --arg card "$1" '.[] | select(.name == $card) | .active_profile // empty'
+}
+
+# Выход, который принадлежит нужному порту (появляется не сразу после смены профиля)
+sink_for_port() {
+    pactl -f json list sinks | jq -r --arg port "$1" '[ .[] | select(any((.ports // [])[]; .name == $port)) ] | .[0].name // empty'
+}
+
+wait_for_sink() {
+    local port="$1"
+    local sink=""
+    local tries=0
+    while [[ -z "$sink" && $tries -lt 10 ]]; do
+        sink="$(sink_for_port "$port")"
+        if [[ -z "$sink" ]]; then
+            sleep 0.5
+        fi
+        tries=$((tries + 1))
+    done
+    printf '%s\n' "$sink"
+}
+
+move_streams_to() {
+    local sink="$1"
+    local stream
+    pactl set-default-sink "$sink"
+    # set-default-sink касается только новых потоков, уже играющие переношу сам
+    while read -r stream; do
+        pactl move-sink-input "$stream" "$sink" 2>/dev/null || true
+    done < <(pactl list short sink-inputs | awk '{ print $1 }')
+}
+
+tv_connected() {
+    hyprctl monitors -j 2>/dev/null | jq -e --arg desc "$tv_desc" 'any(.[]; .description | startswith($desc))' >/dev/null
+}
+
+turn_on() {
+    local found=""
+    local card
+    local port
+    local profile
+    local sink
+    local tries=0
+    # ТВ сообщает имя по HDMI не сразу после картинки, поэтому жду до 10 секунд
+    while [[ -z "$found" && $tries -lt 10 ]]; do
+        found="$(find_tv_port)"
+        if [[ -z "$found" ]]; then
+            sleep 1
+        fi
+        tries=$((tries + 1))
+    done
+    if [[ -z "$found" ]]; then
+        oops "не нашёл HDMI-порт с «$tv_audio_name» в описании; звук не трогаю (посмотрите: pactl list cards)"
+        exit 1
+    fi
+    read -r card port profile <<< "$found"
+    # Пока я ждал, ТВ могли уже отключить — тогда звук не трогаю
+    if ! tv_connected; then
+        return 0
+    fi
+    # Запоминаю прежние профиль карты и выход — любые, в том числе HDMI монитора
+    printf '%s\n%s\n%s\n' "$card" "$(active_profile "$card")" "$(pactl get-default-sink)" > "$saved_state_file"
+    pactl set-card-profile "$card" "$profile"
+    sink="$(wait_for_sink "$port")"
+    if [[ -z "$sink" ]]; then
+        oops "профиль $profile включён, но выход для порта $port не появился"
+        exit 1
+    fi
+    move_streams_to "$sink"
+}
+
+turn_off() {
+    local card
+    local profile
+    local sink
+    local tries=0
+    if [[ ! -f "$saved_state_file" ]]; then
+        oops "не знаю, куда вернуть звук: нет $saved_state_file"
+        exit 1
+    fi
+    { read -r card; read -r profile; read -r sink; } < "$saved_state_file"
+    # Сначала профиль карты, потом выход: прежний выход появляется только с прежним профилем
+    if [[ -n "$profile" ]]; then
+        pactl set-card-profile "$card" "$profile"
+    fi
+    while ! pactl list short sinks | awk '{ print $2 }' | grep -qxF "$sink"; do
+        tries=$((tries + 1))
+        if (( tries > 10 )); then
+            oops "прежний выход $sink не появился"
+            exit 1
+        fi
+        sleep 0.5
+    done
+    move_streams_to "$sink"
+    rm -f "$saved_state_file"
+}
+
+main() {
+    mkdir -p "$state_dir"
+    # Здесь я выстраиваю вызовы в очередь: «off» не обгонит ещё ждущий «on» при быстром отключении ТВ
+    exec 9> "$state_dir/tv-audio.lock"
+    flock 9
+    case "${1:-}" in
+        on) turn_on ;;
+        off) turn_off ;;
+        *)
+            oops "использование: tv-audio on | off"
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

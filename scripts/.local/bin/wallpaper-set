@@ -1,0 +1,250 @@
+#!/usr/bin/env bash
+# Sets a wallpaper with awww and rebuilds the whole color palette with matugen.
+# Usage: wallpaper-set <image> | --restore | --random | --check
+# This work made by Anfinogentov Nikita
+
+set -euo pipefail
+
+wallpaper_dir="$HOME/Pictures/wallpapers"
+# Здесь я беру ~/.cache без XDG_CACHE_HOME: matugen пишет туда буквально, и читатели должны смотреть туда же
+state_dir="$HOME/.cache/dots"
+matugen_config="$HOME/.config/matugen/config.toml"
+# Метка «набор цветов заменён целиком»; лежит в ~/.local/state, чтобы чистка кэша её не стирала
+palette_ok="$HOME/.local/state/dots/palette-complete"
+state_file="$state_dir/wallpaper"
+sddm_dir="/var/lib/dots-sddm"
+
+oops() {
+    printf 'Ooops.. %s\n' "$*" >&2
+    if command -v notify-send >/dev/null 2>&1; then
+        notify-send -u critical "Wallpaper" "Ooops.. $*" || true
+    fi
+}
+
+first_wallpaper() {
+    find "$wallpaper_dir" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | sort | head -n 1
+}
+
+random_wallpaper() {
+    find "$wallpaper_dir" -maxdepth 1 -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) | shuf -n 1
+}
+
+# Здесь я жду демона awww: при входе он стартует одновременно с этим скриптом
+wait_for_daemon() {
+    local tries=0
+    while ! awww query >/dev/null 2>&1; do
+        tries=$((tries + 1))
+        if (( tries > 25 )); then
+            return 1
+        fi
+        sleep 0.2
+    done
+}
+
+show_wallpaper() {
+    local image="$1"
+    if [[ -z "${WAYLAND_DISPLAY:-}" ]]; then
+        return 0
+    fi
+    if ! wait_for_daemon; then
+        oops "awww-daemon не запущен"
+        return 0
+    fi
+    awww img "$image" --transition-type grow --transition-pos 0.5,0.5 --transition-duration 1.2 --transition-fps 60
+}
+
+# Пути всех файлов цветов (output_path из config.toml) относительно домашней папки
+palette_outputs() {
+    sed -n 's/^output_path = "~\/\(.*\)"$/\1/p' "$matugen_config"
+}
+
+# Здесь я не даю matugen писать прямо в рабочие конфиги: он открывает файлы с усечением,
+# и при сбое остались бы пустые. Генерирую во временную папку, проверяю, что каждый файл не пустой,
+# и только потом подменяю файлы по одному через rename в той же папке — подмена атомарная.
+build_palette() {
+    local image="$1"
+    local staging="$state_dir/palette.tmp"
+    local rel
+    local outputs=()
+    mapfile -t outputs < <(palette_outputs)
+    rm -rf "$staging"
+    # Папки создаю заранее, иначе matugen на каждую пишет «folder doesnt exist»
+    for rel in "${outputs[@]}"; do
+        mkdir -p "$staging$HOME/$(dirname "$rel")"
+    done
+    if ! matugen image "$image" --mode dark --prefix "$staging" </dev/null >/dev/null; then
+        oops "matugen не смог построить палитру из $image"
+        rm -rf "$staging"
+        return 1
+    fi
+    for rel in "${outputs[@]}"; do
+        if [[ ! -s "$staging$HOME/$rel" ]]; then
+            oops "matugen не создал ~/$rel, старые цвета оставляю"
+            rm -rf "$staging"
+            return 1
+        fi
+    done
+    if ! swap_palette "$staging" "${outputs[@]}"; then
+        rm -rf "$staging"
+        return 1
+    fi
+    rm -rf "$staging"
+    reload_programs
+}
+
+clean_swap_files() {
+    local item
+    for item in "$@"; do
+        rm -f "$HOME/$item.dots-new" "$HOME/$item.dots-old"
+    done
+}
+
+restore_old_files() {
+    local item
+    for item in "$@"; do
+        if [[ -f "$HOME/$item.dots-old" ]]; then
+            mv -f "$HOME/$item.dots-old" "$HOME/$item"
+        fi
+    done
+}
+
+# Набор меняю целиком: сначала кладу все новые файлы рядом (*.dots-new), старые копирую в *.dots-old,
+# и только потом переименовываю. Сбой посередине — возвращаю все старые файлы. Метка готовности
+# снимается на время замены и ставится после неё: --restore по ней видит, что набор полный.
+swap_palette() {
+    local staging="$1"
+    shift
+    local rel
+    local done_list=()
+    rm -f "$palette_ok"
+    for rel in "$@"; do
+        mkdir -p "$(dirname "$HOME/$rel")"
+        if ! cp "$staging$HOME/$rel" "$HOME/$rel.dots-new"; then
+            oops "не смог подготовить ~/$rel, старые цвета оставляю"
+            clean_swap_files "$@"
+            return 1
+        fi
+        if [[ -f "$HOME/$rel" ]]; then
+            cp -p "$HOME/$rel" "$HOME/$rel.dots-old"
+        fi
+    done
+    for rel in "$@"; do
+        if ! mv -f "$HOME/$rel.dots-new" "$HOME/$rel"; then
+            oops "замена цветов сорвалась на ~/$rel, возвращаю прежний набор"
+            restore_old_files "${done_list[@]}"
+            clean_swap_files "$@"
+            return 1
+        fi
+        done_list+=("$rel")
+    done
+    for rel in "$@"; do
+        rm -f "$HOME/$rel.dots-old"
+    done
+    mkdir -p "$(dirname "$palette_ok")"
+    touch "$palette_ok"
+}
+
+# Перезагрузка программ — только после того, как все новые файлы на месте
+reload_programs() {
+    pkill -USR1 -x kitty 2>/dev/null || true
+    if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+        hyprctl reload >/dev/null 2>&1 || true
+    fi
+    if [[ -d "$sddm_dir" && -w "$sddm_dir" ]] && ! cmp -s "$HOME/.cache/matugen/sddm-theme.conf" "$sddm_dir/theme.conf.user"; then
+        cp -f "$HOME/.cache/matugen/sddm-theme.conf" "$sddm_dir/theme.conf.user"
+    fi
+}
+
+# Здесь я кладу копию обоев туда, откуда её может прочитать экран входа SDDM
+copy_for_sddm() {
+    local image="$1"
+    if [[ -d "$sddm_dir" && -w "$sddm_dir" ]] && ! cmp -s "$image" "$sddm_dir/background"; then
+        cp -f "$image" "$sddm_dir/background"
+    fi
+}
+
+remember() {
+    if [[ -f "$state_file" && "$(cat "$state_file")" == "$1" ]]; then
+        return 0
+    fi
+    mkdir -p "$state_dir"
+    printf '%s\n' "$1" > "$state_file"
+}
+
+# Палитра готова, только если на месте все файлы из config.toml и ни один не пустой
+palette_complete() {
+    local rel
+    if [[ ! -f "$matugen_config" || ! -f "$palette_ok" ]]; then
+        return 1
+    fi
+    while IFS= read -r rel; do
+        if [[ ! -s "$HOME/$rel" ]]; then
+            return 1
+        fi
+    done < <(palette_outputs)
+}
+
+# GTK3 перечитывает gtk.css, когда меняется тема; переключаю её туда-обратно, если есть сессия D-Bus
+refresh_gtk() {
+    local theme
+    if [[ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]] || ! command -v gsettings >/dev/null 2>&1; then
+        return 0
+    fi
+    theme="$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null | tr -d "'")"
+    if [[ -n "$theme" ]]; then
+        gsettings set org.gnome.desktop.interface gtk-theme "Adwaita" || true
+        gsettings set org.gnome.desktop.interface gtk-theme "$theme" || true
+    fi
+}
+
+main() {
+    local mode="${1:-}"
+
+    if [[ "$mode" == "--check" ]]; then
+        palette_complete
+        return $?
+    fi
+
+    # Здесь я не даю двум сменам обоев идти одновременно: вторая просто ждёт первую
+    mkdir -p "$state_dir"
+    exec 9> "$state_dir/wallpaper.lock"
+    flock 9
+    local image=""
+
+    case "$mode" in
+        --restore)
+            if [[ -f "$state_file" ]]; then
+                image="$(cat "$state_file")"
+            fi
+            if [[ -z "$image" || ! -f "$image" ]]; then
+                image="$(first_wallpaper)"
+            fi
+            ;;
+        --random)
+            image="$(random_wallpaper)"
+            ;;
+        "")
+            oops "использование: wallpaper-set <картинка> | --restore | --random"
+            exit 1
+            ;;
+        *)
+            image="$(realpath "$mode")"
+            ;;
+    esac
+
+    if [[ -z "$image" || ! -f "$image" ]]; then
+        oops "не нашёл обоев (искал в $wallpaper_dir)"
+        exit 1
+    fi
+
+    show_wallpaper "$image"
+    # При восстановлении палитру пересобираю, только если каких-то файлов цветов не хватает
+    if [[ "$mode" != "--restore" ]] || ! palette_complete; then
+        build_palette "$image"
+        refresh_gtk
+    fi
+    copy_for_sddm "$image"
+    remember "$image"
+}
+
+main "$@"
