@@ -4,6 +4,7 @@
 
 set -euo pipefail
 
+repo_dir="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")"
 failures=0
 work_dir="$(mktemp -d)"
 trap 'rm -rf "$work_dir"' EXIT
@@ -56,8 +57,29 @@ check_cmdlines() {
     expect "grub cmdline" "$file" "GRUB_CMDLINE_LINUX_DEFAULT=\"loglevel=3 quiet $param\""
 }
 
+# Вопрос о правке загрузчика должен дойти до терминала. Раньше список записей читался циклом
+# `while read ... < <(find)`, цикл занимал stdin, и правка молча пропускалась. Терминал даю через script.
+check_boot_prompt() {
+    local boot="$work_dir/boot"
+    local runner="$work_dir/prompt.sh"
+    mkdir -p "$boot/loader/entries"
+    printf 'options root=UUID=abc rw\n' > "$boot/loader/entries/arch.conf"
+    cat > "$runner" <<RUNNER
+source "$repo_dir/lib/ui.sh"
+source "$repo_dir/lib/bootloader.sh"
+dry_run=0
+sudo() { "\$@"; }
+bootctl() { if [[ "\$*" == *is-installed* ]]; then return 0; fi; printf '%s\n' "$boot"; }
+add_kernel_param "nvidia_drm.modeset=1"
+RUNNER
+    printf 'yes\n' | script -qec "bash $runner" /dev/null > "$work_dir/prompt.log" 2>&1 || true
+    expect "systemd-boot entry patched after a typed yes" "$boot/loader/entries/arch.conf" \
+        'options root=UUID=abc rw nvidia_drm.modeset=1'
+}
+
 check_hooks
 check_cmdlines
+check_boot_prompt
 if (( failures > 0 )); then
     printf '%d sed checks failed\n' "$failures"
     exit 1

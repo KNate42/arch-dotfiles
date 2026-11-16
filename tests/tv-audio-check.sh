@@ -43,9 +43,10 @@ sinks() {
 case "$*" in
     "-f json list sinks") sinks ;;
     "-f json list cards")
-        printf '[ { "name": "alsa_card.pci-0000_01_00.1", "active_profile": "%s", "ports": [\n' "$profile"
-        printf '  { "name": "hdmi-output-0", "description": "HDMI / DisplayPort (DELL U2419H)", "availability": "available", "profiles": ["output:hdmi-stereo"] },\n'
-        printf '  { "name": "hdmi-output-1", "description": "HDMI / DisplayPort 2 (SAMSUNG)", "availability": "available", "profiles": ["output:hdmi-stereo-extra1"] } ] } ]\n'
+        # Как у настоящего pactl: порты карты — объект «имя порта → свойства», поля name внутри нет
+        printf '[ { "name": "alsa_card.pci-0000_01_00.1", "active_profile": "%s", "ports": {\n' "$profile"
+        printf '  "hdmi-output-0": { "description": "HDMI / DisplayPort (DELL U2419H)", "availability": "available", "profiles": ["output:hdmi-stereo"] },\n'
+        printf '  "hdmi-output-1": { "description": "HDMI / DisplayPort 2 (SAMSUNG)", "availability": "available", "profiles": ["output:hdmi-stereo-extra1"] } } } ]\n'
         ;;
     "set-card-profile "*) printf '%s\n' "$3" > "$FAKE_DIR/profile" ;;
     "get-default-sink") cat "$FAKE_DIR/default" ;;
@@ -74,6 +75,9 @@ main() {
     check "TV on: card switched to the TV profile" '[[ "$(cat "$work_dir/profile")" == output:hdmi-stereo-extra1 ]]'
     check "TV on: sound goes to the TV output" '[[ "$(cat "$work_dir/default")" == alsa_output.pci-0000_01_00.1.hdmi-stereo-extra1 ]]'
     check "TV on: playing stream moved too" 'grep -q "move-sink-input 42 alsa_output.pci-0000_01_00.1.hdmi-stereo-extra1" "$work_dir/moves"'
+    # Повторный «on» при уже включённом ТВ не должен затирать запомненный выход монитора
+    run_tv_audio on
+    check "TV on twice: saved output is still the monitor one" 'grep -qxF "alsa_output.pci-0000_01_00.1.hdmi-stereo" "$work_dir/home/.local/state/dots/audio-before-tv"'
     run_tv_audio off
     check "TV off: monitor profile restored" '[[ "$(cat "$work_dir/profile")" == output:hdmi-stereo ]]'
     check "TV off: sound back on the monitor HDMI output" '[[ "$(cat "$work_dir/default")" == alsa_output.pci-0000_01_00.1.hdmi-stereo ]]'

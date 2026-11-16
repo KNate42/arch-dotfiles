@@ -61,16 +61,18 @@ patch_systemd_boot() {
     local param="$1"
     local boot_dir
     local entry
-    local found=0
+    local entries=()
     boot_dir="$(sudo bootctl --print-boot-path 2>/dev/null || sudo bootctl --print-esp-path)"
-    while IFS= read -r entry; do
-        found=1
-        apply_patch "$entry" "/^options / { / ${param//./\\.}( |\$)/! s/\$/ $param/ }" || return 1
-    done < <(sudo find "$boot_dir/loader/entries" -name '*.conf' 2>/dev/null)
-    if (( found == 0 )); then
+    # Список записей сначала читаю в массив: цикл `while read ... < <(find)` занимал stdin,
+    # и вопрос «да» внутри него видел «нет терминала» и молча пропускал правку
+    mapfile -t entries < <(sudo find "$boot_dir/loader/entries" -name '*.conf' 2>/dev/null)
+    if (( ${#entries[@]} == 0 )); then
         oops "не нашёл записей в $boot_dir/loader/entries; если ядро загружается через UKI, параметры задаются в /etc/kernel/cmdline"
         return 1
     fi
+    for entry in "${entries[@]}"; do
+        apply_patch "$entry" "/^options / { / ${param//./\\.}( |\$)/! s/\$/ $param/ }" || return 1
+    done
 }
 
 patch_limine() {

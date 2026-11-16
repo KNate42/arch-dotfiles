@@ -20,15 +20,18 @@ oops() {
 
 # У видеокарты Nvidia один HDMI-выход на профиль карты: выход ТВ появляется только после смены профиля.
 # Поэтому ищу не выход, а порт карты с именем ТВ, и печатаю «карта порт профиль».
+# У карты pactl отдаёт порты объектом «имя порта → свойства» (у выходов — списком с полем name),
+# поэтому имя порта беру из ключа.
 find_tv_port() {
     pactl -f json list cards | jq -r --arg tv "$tv_audio_name" '
         [ .[] | .name as $card
-              | (.ports // [])[]
-              | select((.description | ascii_downcase | contains($tv)) and .availability != "not available")
-              | . as $port
+              | (.ports // {}) | to_entries[]
+              | .key as $port_name
+              | .value as $port
+              | select((($port.description // "") | ascii_downcase | contains($tv)) and $port.availability != "not available")
               | ([ ($port.profiles // [])[] | select(startswith("output:hdmi")) ] | .[0]) as $profile
               | select($profile != null)
-              | "\($card) \($port.name) \($profile)" ]
+              | "\($card) \($port_name) \($profile)" ]
         | .[0] // empty'
 }
 
@@ -93,8 +96,11 @@ turn_on() {
     if ! tv_connected; then
         return 0
     fi
-    # Запоминаю прежние профиль карты и выход — любые, в том числе HDMI монитора
-    printf '%s\n%s\n%s\n' "$card" "$(active_profile "$card")" "$(pactl get-default-sink)" > "$saved_state_file"
+    # Запоминаю прежние профиль карты и выход — любые, в том числе HDMI монитора.
+    # Если звук уже на ТВ (повторный «on»), прежнее не перезаписываю: иначе «off» вернул бы звук на сам ТВ
+    if [[ "$(active_profile "$card")" != "$profile" || ! -f "$saved_state_file" ]]; then
+        printf '%s\n%s\n%s\n' "$card" "$(active_profile "$card")" "$(pactl get-default-sink)" > "$saved_state_file"
+    fi
     pactl set-card-profile "$card" "$profile"
     sink="$(wait_for_sink "$port")"
     if [[ -z "$sink" ]]; then
