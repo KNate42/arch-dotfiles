@@ -64,7 +64,10 @@ check_boot_prompt() {
     local runner="$work_dir/prompt.sh"
     mkdir -p "$boot/loader/entries"
     printf 'options root=UUID=abc rw\n' > "$boot/loader/entries/arch.conf"
+    # Пустой каталог пресетов: без него тест увидел бы UKI самой машины и пошёл бы не той веткой
+    mkdir -p "$work_dir/no-presets"
     cat > "$runner" <<RUNNER
+export DOTS_PRESET_DIR="$work_dir/no-presets"
 source "$repo_dir/lib/ui.sh"
 source "$repo_dir/lib/bootloader.sh"
 dry_run=0
@@ -81,9 +84,64 @@ RUNNER
         'options root=UUID=abc rw nvidia_drm.modeset=1'
 }
 
+# /etc/kernel/cmdline для UKI: дописать параметр, заменить чужой lsm=, второй прогон ничего не меняет
+check_uki_cmdline() {
+    local file="$work_dir/cmdline"
+    local lsm="lsm=landlock,lockdown,yama,integrity,apparmor,bpf"
+    (
+        failures=0
+        source "$repo_dir/lib/ui.sh"
+        source "$repo_dir/lib/bootloader.sh"
+        printf 'root=PARTUUID=abc rootflags=subvol=@ rw rootfstype=btrfs\n' > "$file"
+        apply_twice "$(uki_cmdline_sed "$lsm")" "$file"
+        expect "uki cmdline append" "$file" "root=PARTUUID=abc rootflags=subvol=@ rw rootfstype=btrfs $lsm"
+
+        printf 'root=PARTUUID=abc lsm=landlock,lockdown,yama,integrity,bpf rw\n' > "$file"
+        apply_twice "$(uki_cmdline_sed "$lsm")" "$file"
+        expect "uki cmdline replaces old lsm=" "$file" "root=PARTUUID=abc $lsm rw"
+
+        printf 'root=PARTUUID=abc rw\n' > "$file"
+        apply_twice "$(uki_cmdline_sed nvidia_drm.modeset=1)" "$file"
+        expect "uki cmdline dotted key" "$file" "root=PARTUUID=abc rw nvidia_drm.modeset=1"
+        exit "$failures"
+    ) || failures=$((failures + $?))
+}
+
+# Полный путь UKI под терминалом: правка cmdline после «yes» и пересборка через mkinitcpio -P
+check_uki_prompt() {
+    local runner="$work_dir/uki.sh"
+    local log="$work_dir/uki.log"
+    mkdir -p "$work_dir/uki/presets"
+    printf 'root=PARTUUID=abc rw\n' > "$work_dir/uki/cmdline"
+    printf 'PRESETS=(default)\ndefault_uki="/boot/EFI/Linux/arch-linux.efi"\n' > "$work_dir/uki/presets/linux.preset"
+    cat > "$runner" <<RUNNER
+export DOTS_KERNEL_CMDLINE="$work_dir/uki/cmdline" DOTS_PRESET_DIR="$work_dir/uki/presets"
+source "$repo_dir/lib/ui.sh"
+source "$repo_dir/lib/bootloader.sh"
+dry_run=0
+sudo() { "\$@"; }
+bootctl() { return 1; }
+mkinitcpio() { touch "$work_dir/uki/rebuilt"; }
+add_kernel_param "lsm=landlock,lockdown,yama,integrity,apparmor,bpf"
+RUNNER
+    : > "$log"
+    { for _ in $(seq 1 100); do grep -q 'yes' "$log" && break; sleep 0.1; done; sleep 0.3; printf 'yes\n'; } \
+        | script -qec "bash $runner" /dev/null > "$log" 2>&1 || true
+    expect "uki cmdline patched after a typed yes" "$work_dir/uki/cmdline" \
+        'root=PARTUUID=abc rw lsm=landlock,lockdown,yama,integrity,apparmor,bpf'
+    if [[ -f "$work_dir/uki/rebuilt" ]]; then
+        printf 'PASS uki rebuilt with mkinitcpio -P\n'
+    else
+        printf 'FAIL uki was not rebuilt\n'
+        failures=$((failures + 1))
+    fi
+}
+
 check_hooks
 check_cmdlines
 check_boot_prompt
+check_uki_cmdline
+check_uki_prompt
 if (( failures > 0 )); then
     printf '%d sed checks failed\n' "$failures"
     exit 1

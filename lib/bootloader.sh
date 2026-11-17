@@ -148,8 +148,10 @@ apply_patch() {
 }
 
 # Записи systemd-boot лежат в $BOOT: это ESP или отдельный раздел XBOOTLDR
+# Второй аргумент 1: записей может не быть (ядро уже настроено через UKI), это не ошибка
 patch_systemd_boot() {
     local param="$1"
+    local allow_empty="${2:-0}"
     local boot_dir
     local entry
     local entries=()
@@ -157,9 +159,15 @@ patch_systemd_boot() {
     # Список записей сначала читаю в массив: цикл `while read ... < <(find)` занимал stdin,
     # и вопрос «да» внутри него видел «нет терминала» и молча пропускал правку
     local listing
+    if [[ "$allow_empty" == 1 ]] && ! sudo test -d "$boot_dir/loader/entries"; then
+        return 0
+    fi
     listing="$(sudo find "$boot_dir/loader/entries" -maxdepth 1 -type f -name '*.conf' ! -name '*-rescue.conf')" || return 1
     mapfile -t entries <<< "$listing"
     if [[ -z "$listing" ]]; then
+        if [[ "$allow_empty" == 1 ]]; then
+            return 0
+        fi
         oops "не нашёл записей в $boot_dir/loader/entries; если ядро загружается через UKI, параметры задаются в /etc/kernel/cmdline"
         return 1
     fi
@@ -187,6 +195,53 @@ patch_grub() {
     return 0
 }
 
+# UKI собирает mkinitcpio: параметры ядра зашиты в сам .efi и берутся из /etc/kernel/cmdline.
+# Пути можно подменить (нужно тестам), по умолчанию — системные.
+kernel_cmdline_file="${DOTS_KERNEL_CMDLINE:-/etc/kernel/cmdline}"
+mkinitcpio_preset_dir="${DOTS_PRESET_DIR:-/etc/mkinitcpio.d}"
+
+# UKI включён, если в каком-то пресете mkinitcpio есть незакомментированная строка *_uki=
+uses_uki() {
+    grep -qsE '^[[:space:]]*[A-Za-z0-9_]+_uki=' "$mkinitcpio_preset_dir"/*.preset
+}
+
+# sed для /etc/kernel/cmdline. Если ключ (например lsm=) уже есть с другим значением, я его заменяю:
+# второй lsm= в той же строке сделал бы порядок модулей неочевидным
+uki_cmdline_sed() {
+    local param="$1"
+    local key="${param%%=*}"
+    local key_re="${key//./\\.}"
+    printf '1 { /(^|[[:space:]])%s(=|[[:space:]]|$)/ { s/(^|[[:space:]])%s(=[^[:space:]]*)?([[:space:]]|$)/\\1%s\\3/; b }; s/$/ %s/; s/^ // }' \
+        "$key_re" "$key_re" "$param" "$param"
+}
+
+patch_uki() {
+    local param="$1"
+    local status=0
+    if ! sudo test -f "$kernel_cmdline_file"; then
+        oops "UKI есть, но нет $kernel_cmdline_file; создайте его (можно из /proc/cmdline) и запустите шаг снова"
+        return 1
+    fi
+    # Если в пресете задан --cmdline, mkinitcpio берёт параметры оттуда, а не из файла
+    if grep -qsE '^[^#]*--cmdline' "$mkinitcpio_preset_dir"/*.preset; then
+        oops "в пресете mkinitcpio задан --cmdline: $kernel_cmdline_file не используется, ничего не меняю"
+        return 1
+    fi
+    patch_file "$kernel_cmdline_file" "$(uki_cmdline_sed "$param")" || status=$?
+    if (( status == 2 )); then
+        return 1
+    fi
+    if (( status == 0 )); then
+        # Здесь я пересобираю все UKI, fallback тоже; старые параметры остаются в копии .bak
+        say "пересобираю UKI: mkinitcpio -P"
+        if ! sudo mkinitcpio -P; then
+            oops "mkinitcpio -P упал; вернуть параметры: копия ${kernel_cmdline_file}.bak-… и снова mkinitcpio -P"
+            return 1
+        fi
+    fi
+    return 0
+}
+
 find_limine_conf() {
     local candidate
     for candidate in /boot/limine.conf /boot/limine/limine.conf /efi/limine.conf /boot/EFI/limine/limine.conf /efi/EFI/limine/limine.conf; do
@@ -201,7 +256,15 @@ find_limine_conf() {
 add_kernel_param() {
     local param="$1"
     local limine_conf
-    if sudo bootctl is-installed >/dev/null 2>&1; then
+    # UKI проверяю первым: при нём записей в loader/entries обычно нет, а параметры живут в $kernel_cmdline_file
+    if uses_uki; then
+        say "ядро загружается через UKI: параметры в $kernel_cmdline_file"
+        patch_uki "$param" || return 1
+        # Обычные записи systemd-boot рядом с UKI тоже правлю, если они есть
+        if sudo bootctl is-installed >/dev/null 2>&1; then
+            patch_systemd_boot "$param" 1
+        fi
+    elif sudo bootctl is-installed >/dev/null 2>&1; then
         say "загрузчик: systemd-boot"
         patch_systemd_boot "$param"
     elif limine_conf="$(find_limine_conf)"; then
