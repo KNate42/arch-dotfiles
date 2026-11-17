@@ -64,10 +64,11 @@ Scope {
         focusable: true
         aboveWindows: true
         exclusiveZone: 0
+        WlrLayershell.namespace: "dots-picker"
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-        implicitWidth: 820
-        implicitHeight: 540
+        implicitWidth: Style.space_xl * 34
+        implicitHeight: Style.space_xl * 22
         color: "transparent"
 
         onVisibleChanged: {
@@ -79,43 +80,58 @@ Scope {
         Rectangle {
             id: picker_card
             anchors.fill: parent
-            radius: 14
-            color: Colors.surface
-            border.width: 2
-            border.color: Colors.primary
+            radius: Style.radius_lg
+            color: Style.alpha(Colors.surface, Style.glass_opacity)
+            border.width: 1
+            border.color: Style.alpha(Colors.outline_variant, Style.glass_border_opacity)
 
-            Text {
-                id: title_label
+            Row {
+                id: header_row
                 anchors {
                     top: parent.top
-                    topMargin: 14
+                    topMargin: Style.space_lg
                     left: parent.left
-                    leftMargin: 18
+                    leftMargin: Style.space_lg
                 }
-                text: "󰸉 Select Wallpaper"
-                font.family: "JetBrainsMono Nerd Font"
-                font.pixelSize: 15
-                font.bold: true
-                color: Colors.on_surface
+                spacing: Style.space_sm
+
+                Text {
+                    id: title_icon
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "󰸉"
+                    font.family: Style.font_mono
+                    font.pixelSize: Style.text_lg
+                    color: Colors.primary
+                }
+
+                Text {
+                    id: title_label
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Обои"
+                    font.family: Style.font_ui
+                    font.pixelSize: Style.text_lg
+                    font.weight: Font.DemiBold
+                    color: Colors.on_surface
+                }
             }
 
             GridView {
                 id: wall_grid
                 anchors {
-                    top: title_label.bottom
-                    topMargin: 12
+                    top: header_row.bottom
+                    topMargin: Style.space_md
                     left: parent.left
-                    leftMargin: 16
+                    leftMargin: Style.space_lg
                     right: parent.right
-                    rightMargin: 16
+                    rightMargin: Style.space_lg
                     bottom: parent.bottom
-                    bottomMargin: 16
+                    bottomMargin: Style.space_lg
                 }
                 clip: true
                 focus: true
                 keyNavigationEnabled: true
-                cellWidth: 196
-                cellHeight: 140
+                cellWidth: Style.space_xl * 8
+                cellHeight: Style.space_xl * 6
                 model: folder_model
 
                 Keys.onEscapePressed: picker_root.is_open = false
@@ -150,50 +166,69 @@ Scope {
                         }
                     }
 
-                    width: 184
-                    height: 128
-                    radius: 8
-                    color: thumb_delegate.is_selected ? Colors.primary_container : Colors.surface_container_high
-                    border.width: thumb_delegate.is_selected ? 2 : 1
-                    border.color: thumb_delegate.is_selected ? Colors.primary : Colors.outline_variant
+                    width: Style.space_xl * 8 - Style.space_sm
+                    height: Style.space_xl * 6 - Style.space_md
+                    radius: Style.radius_md
+                    color: thumb_delegate.is_selected
+                        ? Style.alpha(Colors.primary_container, Style.glass_opacity)
+                        : Style.alpha(Colors.surface_container_high, Style.glass_opacity)
+                    border.width: 1
+                    border.color: thumb_delegate.is_selected
+                        ? Colors.primary
+                        : Style.alpha(Colors.outline_variant, Style.glass_border_opacity)
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: Style.motion_fast
+                            easing.type: Style.easing
+                        }
+                    }
+
+                    Behavior on border.color {
+                        ColorAnimation {
+                            duration: Style.motion_fast
+                            easing.type: Style.easing
+                        }
+                    }
 
                     Image {
                         id: thumb_image
                         anchors {
                             top: parent.top
-                            topMargin: 6
+                            topMargin: Style.space_sm
                             left: parent.left
-                            leftMargin: 6
+                            leftMargin: Style.space_sm
                             right: parent.right
-                            rightMargin: 6
+                            rightMargin: Style.space_sm
                         }
-                        height: 92
+                        height: Style.space_xl * 4
                         source: thumb_delegate.fileUrl
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
-                        sourceSize.width: 368
-                        sourceSize.height: 184
+                        sourceSize.width: Style.space_xl * 15
+                        sourceSize.height: Style.space_xl * 8
                     }
 
                     Text {
                         id: thumb_name
                         anchors {
                             left: parent.left
-                            leftMargin: 8
+                            leftMargin: Style.space_sm
                             right: parent.right
-                            rightMargin: 8
+                            rightMargin: Style.space_sm
                             bottom: parent.bottom
-                            bottomMargin: 6
+                            bottomMargin: Style.space_sm
                         }
                         text: thumb_delegate.fileName
-                        font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 11
+                        font.family: Style.font_ui
+                        font.pixelSize: Style.text_xs
                         color: thumb_delegate.is_selected ? Colors.on_primary_container : Colors.on_surface
                         elide: Text.ElideMiddle
                         horizontalAlignment: Text.AlignHCenter
                     }
 
                     MouseArea {
+                        id: thumb_mouse
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
@@ -209,8 +244,8 @@ Scope {
                 anchors.centerIn: parent
                 visible: folder_model.count === 0
                 text: "No wallpapers found in ~/Pictures/wallpapers"
-                font.family: "JetBrainsMono Nerd Font"
-                font.pixelSize: 13
+                font.family: Style.font_ui
+                font.pixelSize: Style.text_md
                 color: Colors.on_surface_variant
             }
         }

@@ -174,9 +174,16 @@ remember() {
 # Палитра готова, только если на месте все файлы из config.toml и ни один не пустой
 palette_complete() {
     local rel
+    local source
     if [[ ! -f "$matugen_config" || ! -f "$palette_ok" ]]; then
         return 1
     fi
+    # Здесь я считаю палитру устаревшей, если после сборки обновились шаблоны, config.toml или сами обои (git pull)
+    for source in "$matugen_config" "$(dirname "$matugen_config")"/templates/* "$(cat "$state_file" 2>/dev/null)"; do
+        if [[ -n "$source" && "$source" -nt "$palette_ok" ]]; then
+            return 1
+        fi
+    done
     while IFS= read -r rel; do
         if [[ ! -s "$HOME/$rel" ]]; then
             return 1

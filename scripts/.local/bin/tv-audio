@@ -68,6 +68,12 @@ move_streams_to() {
     done < <(pactl list short sink-inputs | awk '{ print $1 }')
 }
 
+# Здесь я ищу запасной выход, если прежний пропал: любой выход не с карты ТВ
+fallback_sink() {
+    local card_id="${1#alsa_card.}"
+    pactl list short sinks | awk '{ print $2 }' | grep -vF "$card_id" | head -1
+}
+
 tv_connected() {
     hyprctl monitors -j 2>/dev/null | jq -e --arg desc "$tv_desc" 'any(.[]; .description | startswith($desc))' >/dev/null
 }
@@ -79,6 +85,10 @@ turn_on() {
     local profile
     local sink
     local tries=0
+    local before_sink
+    local before_profile=""
+    # Здесь я снимаю прежнее состояние до ожидания: за эти секунды WirePlumber может сам переключить звук на ТВ
+    before_sink="$(pactl get-default-sink)"
     # ТВ сообщает имя по HDMI не сразу после картинки, поэтому жду до 10 секунд
     while [[ -z "$found" && $tries -lt 10 ]]; do
         found="$(find_tv_port)"
@@ -98,8 +108,14 @@ turn_on() {
     fi
     # Запоминаю прежние профиль карты и выход — любые, в том числе HDMI монитора.
     # Если звук уже на ТВ (повторный «on»), прежнее не перезаписываю: иначе «off» вернул бы звук на сам ТВ
-    if [[ "$(active_profile "$card")" != "$profile" || ! -f "$saved_state_file" ]]; then
-        printf '%s\n%s\n%s\n' "$card" "$(active_profile "$card")" "$(pactl get-default-sink)" > "$saved_state_file"
+    if [[ ! -f "$saved_state_file" ]]; then
+        before_profile="$(active_profile "$card")"
+        # Прежний выход с карты ТВ при её HDMI-профиле — это и есть ТВ, его не запоминаю
+        if [[ "$before_profile" == "$profile" && "$before_sink" == *"${card#alsa_card.}"* ]]; then
+            before_sink=""
+            before_profile=""
+        fi
+        printf '%s\n%s\n%s\n' "$card" "$before_profile" "$before_sink" > "$saved_state_file"
     fi
     pactl set-card-profile "$card" "$profile"
     sink="$(wait_for_sink "$port")"
@@ -120,20 +136,25 @@ turn_off() {
         exit 1
     fi
     { read -r card; read -r profile; read -r sink; } < "$saved_state_file"
+    # Файл удаляю сразу: битое состояние не должно залипать до следующего подключения ТВ
+    rm -f "$saved_state_file"
     # Сначала профиль карты, потом выход: прежний выход появляется только с прежним профилем
     if [[ -n "$profile" ]]; then
-        pactl set-card-profile "$card" "$profile"
+        pactl set-card-profile "$card" "$profile" || true
     fi
-    while ! pactl list short sinks | awk '{ print $2 }' | grep -qxF "$sink"; do
+    while [[ -z "$sink" ]] || ! pactl list short sinks | awk '{ print $2 }' | grep -qxF "$sink"; do
         tries=$((tries + 1))
         if (( tries > 10 )); then
-            oops "прежний выход $sink не появился"
-            exit 1
+            sink="$(fallback_sink "$card")"
+            if [[ -z "$sink" ]]; then
+                oops "прежний выход пропал, а другого выхода, кроме ТВ, нет"
+                exit 1
+            fi
+            break
         fi
         sleep 0.5
     done
     move_streams_to "$sink"
-    rm -f "$saved_state_file"
 }
 
 main() {

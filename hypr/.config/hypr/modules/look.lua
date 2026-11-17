@@ -12,8 +12,9 @@ end
 
 hl.config({
     general = {
-        gaps_in = 5,
-        gaps_out = 12,
+        gaps_in = 6,
+        -- сверху отступ меньше: над окнами уже висит панель-остров со своим отступом
+        gaps_out = { top = 8, right = 14, bottom = 14, left = 14 },
         border_size = 2,
         col = {
             active_border = active_border,
@@ -25,21 +26,30 @@ hl.config({
     },
 
     decoration = {
-        rounding = 10,
-        rounding_power = 2,
+        rounding = 14,
+        rounding_power = 2.4,
         active_opacity = 1.0,
-        inactive_opacity = 0.96,
+        inactive_opacity = 0.97,
+        dim_inactive = true,
+        dim_strength = 0.04,
+        -- Здесь я делаю тень мягкой и широкой: окна «парят», а не обведены тёмной каймой
         shadow = {
             enabled = true,
-            range = 8,
-            render_power = 3,
-            color = 0xaa0b0b0b,
+            range = 28,
+            render_power = 4,
+            offset = "0 6",
+            color = 0x66000000,
+            color_inactive = 0x33000000,
         },
         blur = {
             enabled = true,
-            size = 5,
-            passes = 2,
-            vibrancy = 0.1696,
+            size = 8,
+            passes = 3,
+            noise = 0.02,
+            contrast = 1.0,
+            brightness = 0.95,
+            vibrancy = 0.2,
+            popups = true,
         },
     },
 

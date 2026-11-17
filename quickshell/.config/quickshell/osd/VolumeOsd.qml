@@ -51,59 +51,68 @@ Scope {
     PanelWindow {
         id: osd_window
         visible: osd_root.osd_visible
+        WlrLayershell.namespace: "dots-osd"
         anchors {
             bottom: true
         }
         margins {
-            bottom: 48
+            bottom: Style.space_xl * 2
         }
         exclusiveZone: 0
         focusable: false
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
-        implicitWidth: 260
-        implicitHeight: 52
+        implicitWidth: Style.space_xl * 11
+        implicitHeight: Style.space_xl * 2 + Style.space_xs
         color: "transparent"
 
         Rectangle {
             id: osd_card
             anchors.fill: parent
-            radius: 12
-            color: Colors.surface_container_high
+            radius: Style.radius_lg
+            color: Style.alpha(Colors.surface, Style.glass_opacity)
             border.width: 1
-            border.color: Colors.outline_variant
+            border.color: Style.alpha(Colors.outline_variant, Style.glass_border_opacity)
 
             Row {
+                id: osd_row
                 anchors {
                     fill: parent
-                    leftMargin: 16
-                    rightMargin: 16
+                    leftMargin: Style.space_lg
+                    rightMargin: Style.space_lg
                 }
-                spacing: 12
+                spacing: Style.space_md
 
                 Text {
                     id: osd_icon
                     anchors.verticalCenter: parent.verticalCenter
                     text: osd_root.is_muted ? "󰝟" : "󰕾"
-                    font.family: "JetBrainsMono Nerd Font"
-                    font.pixelSize: 18
+                    font.family: Style.font_mono
+                    font.pixelSize: Style.text_lg
                     color: osd_root.is_muted ? Colors.on_surface_variant : Colors.primary
                 }
 
                 Rectangle {
                     id: level_track
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 140
-                    height: 8
-                    radius: 4
-                    color: Colors.surface_variant
+                    width: Style.space_xl * 6
+                    height: Style.space_sm
+                    radius: Style.radius_pill
+                    color: Style.alpha(Colors.surface_variant, Style.glass_opacity)
 
                     Rectangle {
                         id: level_fill
                         width: parent.width * osd_root.clamped_level
                         height: parent.height
-                        radius: 4
+                        radius: Style.radius_pill
                         color: osd_root.is_muted ? Colors.outline : Colors.primary
+
+                        Behavior on width {
+                            NumberAnimation {
+                                duration: Style.motion_fast
+                                easing.type: Style.easing
+                            }
+                        }
                     }
                 }
 
@@ -111,9 +120,9 @@ Scope {
                     id: osd_text
                     anchors.verticalCenter: parent.verticalCenter
                     text: osd_root.is_muted ? "MUTE" : (osd_root.volume_percent + "%")
-                    font.family: "JetBrainsMono Nerd Font"
-                    font.pixelSize: 12
-                    font.bold: true
+                    font.family: Style.font_ui
+                    font.pixelSize: Style.text_sm
+                    font.weight: Font.DemiBold
                     color: Colors.on_surface
                 }
             }

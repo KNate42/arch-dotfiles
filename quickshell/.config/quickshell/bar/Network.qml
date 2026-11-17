@@ -5,7 +5,7 @@ import QtQuick
 import Quickshell.Networking
 import "../theme"
 
-Rectangle {
+BarChip {
     id: network_root
 
     readonly property int conn_state: Networking.connectivity // conn = connectivity
@@ -23,17 +23,6 @@ Rectangle {
         return "󰖪";
     }
 
-    implicitWidth: network_label.implicitWidth + 14
-    implicitHeight: 22
-    radius: 6
-    color: Colors.surface_container_high
-
-    Text {
-        id: network_label
-        anchors.centerIn: parent
-        text: network_root.net_icon
-        font.family: "JetBrainsMono Nerd Font"
-        font.pixelSize: 13
-        color: network_root.is_online ? Colors.on_surface : Colors.on_surface_variant
-    }
+    icon: network_root.net_icon
+    icon_color: network_root.is_online ? Colors.on_surface : Colors.on_surface_variant
 }

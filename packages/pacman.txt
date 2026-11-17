@@ -48,6 +48,7 @@ qt5ct
 nwg-look
 papirus-icon-theme
 ttf-jetbrains-mono-nerd
+inter-font
 noto-fonts
 noto-fonts-emoji
 noto-fonts-cjk

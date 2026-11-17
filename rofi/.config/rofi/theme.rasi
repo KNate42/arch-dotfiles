@@ -2,13 +2,14 @@
 /* This work made by Anfinogentov Nikita */
 
 * {
-    bg: #111318e6;
-    bg-alt: #282a2f;
+    bg: #111318b8;
+    bg-alt: #282a2f99;
     fg: #e2e2e9;
     fg-alt: #c4c6d0;
     accent: #aac7ff;
+    accent-soft: #aac7ff2e;
     on-accent: #0a305f;
-    border-col: #44474e;
+    border-col: #44474e59;
 }
 
 /* Здесь я подключаю палитру matugen поверх запасных цветов выше */
@@ -20,56 +21,78 @@
 }
 
 window {
-    width: 560px;
-    border: 2px;
+    location: center;
+    anchor: center;
+    width: 640px;
+    border: 1px;
     border-color: @border-col;
-    border-radius: 14px;
+    border-radius: 18px;
     background-color: @bg;
-    padding: 14px;
+    padding: 16px;
 }
 
 mainbox {
-    spacing: 10px;
+    spacing: 12px;
     children: [ inputbar, listview ];
 }
 
+/* Поле поиска-пилюля сверху с глифом лупы для drun и dmenu */
 inputbar {
-    padding: 10px 14px;
-    border-radius: 10px;
+    padding: 10px 16px;
+    border: 1px;
+    border-color: @border-col;
+    border-radius: 22px;
     background-color: @bg-alt;
-    children: [ prompt, entry ];
+    children: [ textbox-search, entry ];
     spacing: 10px;
 }
 
+textbox-search {
+    expand: false;
+    str: "󰍉";
+    font: "JetBrainsMono Nerd Font 13";
+    text-color: @fg-alt;
+    vertical-align: 0.5;
+}
+
 prompt {
-    text-color: @accent;
+    font: "JetBrainsMono Nerd Font 13";
+    text-color: @fg-alt;
+    vertical-align: 0.5;
 }
 
 entry {
-    placeholder: "Search";
+    placeholder: "Search...";
     placeholder-color: @fg-alt;
+    text-color: @fg;
+    vertical-align: 0.5;
 }
 
 listview {
     lines: 8;
     columns: 1;
     fixed-height: false;
+    dynamic: true;
+    scrollbar: false;
+    border: 0px;
     spacing: 4px;
 }
 
 element {
-    padding: 8px 12px;
-    border-radius: 10px;
+    padding: 10px 14px;
+    border-radius: 12px;
     spacing: 12px;
 }
 
+/* Здесь я подсвечиваю выбранный элемент мягким полупрозрачным primary без резкой плашки */
 element selected {
-    background-color: @accent;
-    text-color: @on-accent;
+    background-color: @accent-soft;
+    text-color: @fg;
 }
 
 element-icon {
     size: 24px;
+    vertical-align: 0.5;
 }
 
 element-text {

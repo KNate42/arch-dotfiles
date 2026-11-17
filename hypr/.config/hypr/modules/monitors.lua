@@ -52,3 +52,13 @@ hl.on("monitor.removed", function(monitor)
     end
     hl.exec_cmd(tv_audio .. " off")
 end)
+
+-- Здесь я ловлю ТВ, включённый ещё до входа в сессию: событие подключения для него может не прийти
+hl.on("hyprland.start", function()
+    for _, monitor in ipairs(hl.get_monitors()) do
+        if is_tv(monitor) then
+            hl.exec_cmd(tv_audio .. " on")
+            return
+        end
+    end
+end)

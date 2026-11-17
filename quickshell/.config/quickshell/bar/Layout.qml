@@ -6,15 +6,15 @@ import Quickshell.Hyprland
 import Quickshell.Io
 import "../theme"
 
-Rectangle {
+BarChip {
     id: layout_root
 
     property string current_layout: "EN"
 
-    implicitWidth: layout_text.implicitWidth + 14
-    implicitHeight: 22
-    radius: 6
-    color: Colors.surface_container_high
+    icon: "󰌌"
+    label: layout_root.current_layout
+    icon_color: Colors.on_surface
+    text_color: Colors.on_surface
 
     // Здесь я разбираю строку события activelayout вида "клавиатура,раскладка" с учётом возможных запятых в имени
     function update_layout_from_event(raw_payload) {
@@ -41,20 +41,29 @@ Rectangle {
         }
     }
 
-    Text {
-        id: layout_text
-        anchors.centerIn: parent
-        text: "󰌌 " + layout_root.current_layout
-        font.family: "JetBrainsMono Nerd Font"
-        font.pixelSize: 12
-        font.bold: true
-        color: Colors.on_surface
+    // Здесь я один раз спрашиваю текущую раскладку при создании: панель нового экрана (ТВ) иначе показывала бы EN до первого переключения
+    Process {
+        id: layout_query
+        running: true
+        command: ["hyprctl", "devices", "-j"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const keyboards = JSON.parse(this.text).keyboards || [];
+                    const main_kb = keyboards.find(kb => kb.main) || keyboards[0]; // kb = keyboard
+                    if (main_kb && main_kb.active_keymap) {
+                        layout_root.update_layout_from_event("," + main_kb.active_keymap);
+                    }
+                } catch (err) {
+                    return;
+                }
+            }
+        }
     }
 
-    MouseArea {
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: layout_switch.running = true
+    onClicked: {
+        layout_switch.running = false;
+        layout_switch.running = true;
     }
 
     Process {

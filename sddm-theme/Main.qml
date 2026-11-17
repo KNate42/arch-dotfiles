@@ -10,7 +10,12 @@ Rectangle {
     height: 1080
     color: surface_color
 
-    readonly property string font_family: "JetBrainsMono Nerd Font"
+    readonly property string font_family: "Inter"
+
+    // Здесь я делаю цвет полупрозрачным для стеклянных карточек и мягких кнопок
+    function alpha(base, amount) {
+        return Qt.rgba(base.r, base.g, base.b, amount)
+    }
 
     readonly property string bg_source: (typeof config !== "undefined" && config && config.background) ? config.background : "background.jpg"
     readonly property color primary_color: (typeof config !== "undefined" && config && config.primary) ? config.primary : "#89b4fa"
@@ -180,8 +185,8 @@ Rectangle {
                 text: root_pane.current_time_text
                 color: root_pane.on_surface_color
                 font.family: root_pane.font_family
-                font.pixelSize: 72
-                font.bold: true
+                font.pixelSize: 96
+                font.weight: Font.Light
             }
 
             Text {
@@ -189,20 +194,21 @@ Rectangle {
                 anchors.horizontalCenter: parent.horizontalCenter
                 text: root_pane.current_date_text
                 color: root_pane.on_surface_color
-                opacity: 0.85
+                opacity: 0.80
                 font.family: root_pane.font_family
                 font.pixelSize: 18
             }
         }
 
+        // Стеклянная карточка входа с полупрозрачным фоном и тонкой рамкой
         Rectangle {
             id: login_card
             width: parent.width
             height: card_column.implicitHeight + 48
-            radius: 20
-            color: root_pane.surface_container_color
+            radius: 18
+            color: root_pane.alpha(root_pane.surface_container_color, 0.72)
             border.width: 1
-            border.color: root_pane.outline_color
+            border.color: root_pane.alpha(root_pane.outline_color, 0.35)
 
             Column {
                 id: card_column
@@ -217,9 +223,10 @@ Rectangle {
                     visible: !user_combo.visible && root_pane.selected_user !== ""
                     text: root_pane.selected_user
                     color: root_pane.on_surface_color
+                    opacity: 0.90
                     font.family: root_pane.font_family
-                    font.pixelSize: 16
-                    font.bold: true
+                    font.pixelSize: 15
+                    font.weight: Font.Medium
                 }
 
                 // Здесь я показываю выпадающий список только если в системе больше одного пользователя
@@ -246,9 +253,11 @@ Rectangle {
 
                     background: Rectangle {
                         radius: 12
-                        color: root_pane.surface_color
-                        border.width: user_combo.activeFocus ? 2 : 1
-                        border.color: user_combo.activeFocus ? root_pane.primary_color : root_pane.outline_color
+                        color: root_pane.alpha(root_pane.surface_color, 0.65)
+                        border.width: 1
+                        border.color: user_combo.activeFocus
+                            ? root_pane.alpha(root_pane.primary_color, 0.65)
+                            : root_pane.alpha(root_pane.outline_color, 0.35)
                     }
                 }
 
@@ -259,7 +268,7 @@ Rectangle {
                     focus: true
                     echoMode: TextInput.Password
                     placeholderText: "Password"
-                    placeholderTextColor: root_pane.outline_color
+                    placeholderTextColor: root_pane.alpha(root_pane.on_surface_color, 0.45)
                     color: root_pane.on_surface_color
                     selectionColor: root_pane.primary_color
                     selectedTextColor: root_pane.on_primary_color
@@ -273,11 +282,13 @@ Rectangle {
                     background: Rectangle {
                         id: password_bg
                         radius: 14
-                        color: root_pane.surface_color
-                        border.width: password_field.activeFocus ? 2 : 1
+                        color: root_pane.alpha(root_pane.surface_color, 0.65)
+                        border.width: 1
                         border.color: root_pane.error_text !== ""
                             ? root_pane.error_color
-                            : (password_field.activeFocus ? root_pane.primary_color : root_pane.outline_color)
+                            : (password_field.activeFocus
+                                ? root_pane.alpha(root_pane.primary_color, 0.65)
+                                : root_pane.alpha(root_pane.outline_color, 0.35))
                     }
                 }
 
@@ -288,7 +299,7 @@ Rectangle {
                     text: "Sign in"
                     font.family: root_pane.font_family
                     font.pixelSize: 15
-                    font.bold: true
+                    font.weight: Font.Medium
                     onClicked: root_pane.try_login()
 
                     contentItem: Text {
@@ -302,8 +313,12 @@ Rectangle {
                     background: Rectangle {
                         id: login_button_bg
                         radius: 14
-                        color: root_pane.primary_color
-                        opacity: login_button.down ? 0.85 : (login_button.hovered ? 0.92 : 1.0)
+                        color: root_pane.alpha(
+                            root_pane.primary_color,
+                            login_button.down ? 0.75 : (login_button.hovered ? 0.92 : 0.84)
+                        )
+                        border.width: 1
+                        border.color: root_pane.alpha(root_pane.primary_color, 0.40)
                     }
                 }
 
@@ -357,10 +372,12 @@ Rectangle {
                 }
 
                 background: Rectangle {
-                    radius: 12
-                    color: root_pane.surface_container_color
-                    border.width: session_combo.activeFocus ? 2 : 1
-                    border.color: session_combo.activeFocus ? root_pane.primary_color : root_pane.outline_color
+                    radius: 14
+                    color: root_pane.alpha(root_pane.surface_container_color, 0.65)
+                    border.width: 1
+                    border.color: session_combo.activeFocus
+                        ? root_pane.alpha(root_pane.primary_color, 0.60)
+                        : root_pane.alpha(root_pane.outline_color, 0.30)
                 }
             }
 
@@ -368,10 +385,13 @@ Rectangle {
                 id: layout_badge
                 width: 56
                 height: 40
-                radius: 12
-                color: root_pane.surface_container_color
+                radius: 14
+                color: root_pane.alpha(
+                    root_pane.surface_container_color,
+                    layout_mouse.containsMouse ? 0.80 : 0.65
+                )
                 border.width: 1
-                border.color: root_pane.outline_color
+                border.color: root_pane.alpha(root_pane.outline_color, 0.30)
 
                 Text {
                     id: layout_text
@@ -380,12 +400,13 @@ Rectangle {
                     color: root_pane.on_surface_color
                     font.family: root_pane.font_family
                     font.pixelSize: 13
-                    font.bold: true
+                    font.weight: Font.Medium
                 }
 
                 MouseArea {
                     id: layout_mouse
                     anchors.fill: parent
+                    hoverEnabled: true
                     onClicked: root_pane.cycle_keyboard_layout()
                 }
             }
@@ -409,17 +430,22 @@ Rectangle {
                 contentItem: Text {
                     text: reboot_button.text
                     font: reboot_button.font
-                    color: root_pane.on_surface_color
+                    color: root_pane.alpha(root_pane.on_surface_color, 0.90)
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
 
                 background: Rectangle {
                     id: reboot_bg
-                    radius: 12
-                    color: root_pane.surface_container_color
+                    radius: 14
+                    color: root_pane.alpha(
+                        root_pane.surface_container_color,
+                        reboot_button.down ? 0.85 : (reboot_button.hovered ? 0.78 : 0.65)
+                    )
                     border.width: 1
-                    border.color: reboot_button.hovered ? root_pane.primary_color : root_pane.outline_color
+                    border.color: reboot_button.hovered
+                        ? root_pane.alpha(root_pane.primary_color, 0.50)
+                        : root_pane.alpha(root_pane.outline_color, 0.30)
                 }
             }
 
@@ -435,17 +461,24 @@ Rectangle {
                 contentItem: Text {
                     text: poweroff_button.text
                     font: poweroff_button.font
-                    color: root_pane.error_color
+                    color: poweroff_button.hovered
+                        ? root_pane.error_color
+                        : root_pane.alpha(root_pane.on_surface_color, 0.90)
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                 }
 
                 background: Rectangle {
                     id: poweroff_bg
-                    radius: 12
-                    color: root_pane.surface_container_color
+                    radius: 14
+                    color: root_pane.alpha(
+                        root_pane.surface_container_color,
+                        poweroff_button.down ? 0.85 : (poweroff_button.hovered ? 0.78 : 0.65)
+                    )
                     border.width: 1
-                    border.color: poweroff_button.hovered ? root_pane.error_color : root_pane.outline_color
+                    border.color: poweroff_button.hovered
+                        ? root_pane.alpha(root_pane.error_color, 0.55)
+                        : root_pane.alpha(root_pane.outline_color, 0.30)
                 }
             }
         }

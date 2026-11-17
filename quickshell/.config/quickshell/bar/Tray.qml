@@ -8,7 +8,7 @@ import "../theme"
 
 Row {
     id: tray_root
-    spacing: 4
+    spacing: Style.space_xs
 
     Repeater {
         model: SystemTray.items
@@ -17,10 +17,21 @@ Row {
             id: tray_item
             required property var modelData
 
-            width: 24
-            height: 22
-            radius: 6
-            color: Colors.surface_container_high
+            width: Style.bar_item_height
+            height: Style.bar_item_height
+            radius: Style.radius_pill
+            color: tray_mouse.pressed
+                ? Style.alpha(Colors.on_surface, Style.press_opacity)
+                : (tray_mouse.containsMouse
+                    ? Style.alpha(Colors.on_surface, Style.hover_opacity)
+                    : Style.alpha(Colors.on_surface, 0.0))
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Style.motion_fast
+                    easing.type: Style.easing
+                }
+            }
 
             QsMenuAnchor {
                 id: menu_anchor
@@ -38,7 +49,9 @@ Row {
             }
 
             MouseArea {
+                id: tray_mouse
                 anchors.fill: parent
+                hoverEnabled: true
                 acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                 cursorShape: Qt.PointingHandCursor
                 onClicked: mouse => {

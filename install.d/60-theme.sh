@@ -15,7 +15,8 @@ copy_wallpapers() {
     local image
     run_cmd mkdir -p "$target_dir"
     for image in "$repo_dir"/wallpapers/*; do
-        if [[ -f "$image" && ! -e "$target_dir/$(basename "$image")" ]]; then
+        # Свои обои из репозитория обновляю при изменении: имена 01-… заняты набором, чужие файлы не трогаю
+        if [[ -f "$image" ]] && ! cmp -s "$image" "$target_dir/$(basename "$image")"; then
             run_cmd cp "$image" "$target_dir/"
         fi
     done

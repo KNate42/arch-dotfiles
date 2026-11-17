@@ -2,3 +2,4 @@
 # This work made by Anfinogentov Nikita
 
 singleton Colors 1.0 Colors.qml
+singleton Style 1.0 Style.qml

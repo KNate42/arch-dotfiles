@@ -6,16 +6,16 @@ local gtk_settings = {
     { "gtk-theme", "adw-gtk3-dark" },
     { "icon-theme", "Papirus-Dark" },
     { "cursor-theme", "Bibata-Modern-Classic" },
-    { "font-name", "JetBrainsMono Nerd Font 10" },
+    { "font-name", "Inter 10" },
 }
 
 hl.on("hyprland.start", function()
     -- Здесь я на всякий случай отдаю окружение сессии в D-Bus и systemd: без него не стартуют порталы
-    hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP HYPRLAND_INSTANCE_SIGNATURE")
+    -- polkit-агент запускаю только после передачи окружения: иначе на быстром диске он стартует без WAYLAND_DISPLAY
+    hl.exec_cmd("sh -c 'dbus-update-activation-environment --systemd --all && systemctl --user start hyprpolkitagent'")
     hl.exec_cmd("awww-daemon")
     hl.exec_cmd("quickshell")
     hl.exec_cmd("hypridle")
-    hl.exec_cmd("systemctl --user start hyprpolkitagent")
     hl.exec_cmd("wl-paste --watch cliphist store")
     -- Здесь я возвращаю последние обои и тему GTK: gsettings работает только внутри сессии
     hl.exec_cmd((os.getenv("HOME") or "") .. "/.local/bin/wallpaper-set --restore")

@@ -39,12 +39,14 @@ Rectangle {
     }
 
     visible: popup_root.index < 5
-    width: 320
-    implicitHeight: Math.max(56, text_column.implicitHeight + 20)
-    radius: 10
-    color: Colors.surface_container_high
+    width: Style.space_xl * 14
+    implicitHeight: Math.max(Style.bar_height + Style.space_xl, text_column.implicitHeight + Style.space_md * 2)
+    radius: Style.radius_md
+    color: Style.alpha(Colors.surface, Style.glass_opacity)
     border.width: 1
-    border.color: popup_root.is_critical ? Colors.error : Colors.outline_variant
+    border.color: popup_root.is_critical
+        ? Colors.error
+        : Style.alpha(Colors.outline_variant, Style.glass_border_opacity)
 
     Timer {
         id: expire_timer
@@ -62,14 +64,14 @@ Rectangle {
         id: icon_box
         anchors {
             left: parent.left
-            leftMargin: 10
+            leftMargin: Style.space_md
             top: parent.top
-            topMargin: 10
+            topMargin: Style.space_md
         }
-        width: 36
-        height: 36
-        radius: 8
-        color: Colors.surface_variant
+        width: Style.bar_height
+        height: Style.bar_height
+        radius: Style.radius_sm
+        color: Style.alpha(Colors.surface_variant, Style.glass_opacity)
 
         Image {
             id: app_image // app = application
@@ -86,8 +88,8 @@ Rectangle {
             anchors.centerIn: parent
             visible: popup_root.resolved_icon === ""
             text: "󰂚"
-            font.family: "JetBrainsMono Nerd Font"
-            font.pixelSize: 18
+            font.family: Style.font_mono
+            font.pixelSize: Style.text_lg
             color: popup_root.is_critical ? Colors.error : Colors.primary
         }
     }
@@ -96,20 +98,20 @@ Rectangle {
         id: text_column
         anchors {
             left: icon_box.right
-            leftMargin: 10
+            leftMargin: Style.space_md
             right: parent.right
-            rightMargin: 10
+            rightMargin: Style.space_md
             verticalCenter: parent.verticalCenter
         }
-        spacing: 4
+        spacing: Style.space_xs
 
         Text {
             id: summary_label
             width: parent.width
             text: popup_root.modelData && popup_root.modelData.summary ? popup_root.modelData.summary : "Notification"
-            font.family: "JetBrainsMono Nerd Font"
-            font.pixelSize: 13
-            font.bold: true
+            font.family: Style.font_ui
+            font.pixelSize: Style.text_md
+            font.weight: Font.DemiBold
             color: Colors.on_surface
             elide: Text.ElideRight
             maximumLineCount: 1
@@ -120,8 +122,8 @@ Rectangle {
             width: parent.width
             visible: body_label.text !== ""
             text: popup_root.modelData && popup_root.modelData.body ? popup_root.modelData.body : ""
-            font.family: "JetBrainsMono Nerd Font"
-            font.pixelSize: 12
+            font.family: Style.font_ui
+            font.pixelSize: Style.text_sm
             color: Colors.on_surface_variant
             wrapMode: Text.Wrap
             maximumLineCount: 4

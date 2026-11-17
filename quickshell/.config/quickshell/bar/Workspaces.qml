@@ -1,4 +1,4 @@
-// Hyprland workspaces indicator and switcher for a single monitor
+// Hyprland workspaces pill indicator and switcher for a single monitor
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -8,7 +8,7 @@ import "../theme"
 
 Row {
     id: workspaces_root
-    spacing: 4
+    spacing: Style.space_sm
 
     property var bar_screen: null
     readonly property var hypr_monitor: workspaces_root.bar_screen ? Hyprland.monitorFor(workspaces_root.bar_screen) : null
@@ -38,22 +38,28 @@ Row {
             }
 
             visible: ws_item.on_this_monitor && !ws_item.is_special
-            width: Math.max(24, ws_label.implicitWidth + 12)
-            height: 22
-            radius: 6
-            color: ws_item.is_active ? Colors.primary : Colors.surface_container_high
+            anchors.verticalCenter: parent.verticalCenter
+            width: ws_item.is_active ? (Style.space_xl + Style.space_xs) : Style.space_sm
+            height: Style.space_sm
+            radius: Style.radius_pill
+            color: ws_item.is_active ? Colors.primary : Colors.on_surface_variant
 
-            Text {
-                id: ws_label
-                anchors.centerIn: parent
-                text: ws_item.modelData ? ws_item.modelData.name : ""
-                font.family: "JetBrainsMono Nerd Font"
-                font.pixelSize: 12
-                font.bold: ws_item.is_active
-                color: ws_item.is_active ? Colors.on_primary : Colors.on_surface
+            Behavior on width {
+                NumberAnimation {
+                    duration: Style.motion_normal
+                    easing.type: Style.easing
+                }
+            }
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: Style.motion_normal
+                    easing.type: Style.easing
+                }
             }
 
             MouseArea {
+                id: ws_mouse
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
                 onClicked: {

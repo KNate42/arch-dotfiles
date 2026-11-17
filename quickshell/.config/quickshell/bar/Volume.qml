@@ -5,7 +5,7 @@ import QtQuick
 import Quickshell.Services.Pipewire
 import "../theme"
 
-Rectangle {
+BarChip {
     id: volume_root
 
     readonly property var sink_node: Pipewire.defaultAudioSink
@@ -32,35 +32,23 @@ Rectangle {
         objects: Pipewire.defaultAudioSink ? [Pipewire.defaultAudioSink] : []
     }
 
-    implicitWidth: volume_label.implicitWidth + 14
-    implicitHeight: 22
-    radius: 6
-    color: Colors.surface_container_high
+    icon: volume_root.volume_icon
+    label: volume_root.has_audio ? (volume_root.is_muted ? "MUTE" : (volume_root.volume_percent + "%")) : "--"
+    icon_color: volume_root.is_muted ? Colors.on_surface_variant : Colors.on_surface
+    text_color: volume_root.is_muted ? Colors.on_surface_variant : Colors.on_surface
 
-    Text {
-        id: volume_label
-        anchors.centerIn: parent
-        text: volume_root.volume_icon + " " + (volume_root.has_audio ? (volume_root.is_muted ? "MUTE" : (volume_root.volume_percent + "%")) : "--")
-        font.family: "JetBrainsMono Nerd Font"
-        font.pixelSize: 12
-        color: volume_root.is_muted ? Colors.on_surface_variant : Colors.on_surface
+    onClicked: {
+        if (volume_root.has_audio) {
+            volume_root.sink_audio.muted = !volume_root.sink_audio.muted;
+        }
     }
 
-    MouseArea {
-        anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
-        onClicked: {
-            if (volume_root.has_audio) {
-                volume_root.sink_audio.muted = !volume_root.sink_audio.muted;
-            }
+    onWheel: wheel => {
+        if (!volume_root.has_audio) {
+            return;
         }
-        onWheel: wheel => {
-            if (!volume_root.has_audio) {
-                return;
-            }
-            const delta_step = wheel.angleDelta.y > 0 ? 0.05 : -0.05;
-            const next_val = Math.max(0.0, Math.min(1.0, volume_root.volume_level + delta_step)); // val = value
-            volume_root.sink_audio.volume = next_val;
-        }
+        const delta_step = wheel.angleDelta.y > 0 ? 0.05 : -0.05;
+        const next_val = Math.max(0.0, Math.min(1.0, volume_root.volume_level + delta_step)); // val = value
+        volume_root.sink_audio.volume = next_val;
     }
 }

@@ -24,3 +24,18 @@ hl.layer_rule({
     match = { namespace = "^rofi$" },
     blur = true,
 })
+
+-- Здесь я размываю фон под стеклом оболочки (панель, меню питания, уведомления, OSD, выбор обоев);
+-- ignore_alpha не размывает полностью прозрачные края, иначе вокруг скруглений видна серая рамка
+hl.layer_rule({
+    name = "blur-shell",
+    match = { namespace = "^dots-.*$" },
+    blur = true,
+    ignore_alpha = 0.2,
+})
+
+hl.layer_rule({
+    name = "fade-shell",
+    match = { namespace = "^dots-(power|picker)$" },
+    animation = "fade",
+})
