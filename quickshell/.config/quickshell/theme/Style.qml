@@ -50,6 +50,19 @@ Singleton {
     readonly property int motion_slow: 360
     readonly property int easing: Easing.OutCubic
 
+    // Остров: капсула сверху по центру, перетекает между состояниями пружиной
+    readonly property int island_height: 36
+    readonly property int island_margin_top: 8
+    readonly property int island_expanded_radius: 26
+    readonly property real island_opacity: 0.92
+    readonly property real spring: 3.2
+    readonly property real spring_damping: 0.28
+
+    // Центр управления: панель справа из плиток
+    readonly property int control_width: 400
+    readonly property int tile_gap: 10
+    readonly property int tile_radius: 20
+
     // Здесь я делаю цвет полупрозрачным, не трогая сам цвет темы
     function alpha(base, amount) { // base = theme color, amount = opacity 0..1
         return Qt.rgba(base.r, base.g, base.b, amount);

@@ -72,7 +72,7 @@ build_palette() {
     for rel in "${outputs[@]}"; do
         mkdir -p "$staging$HOME/$(dirname "$rel")"
     done
-    if ! matugen image "$image" --mode dark --prefix "$staging" </dev/null >/dev/null; then
+    if ! matugen image "$image" --mode dark --type scheme-vibrant --prefix "$staging" </dev/null >/dev/null; then
         oops "matugen не смог построить палитру из $image"
         rm -rf "$staging"
         return 1
@@ -179,7 +179,7 @@ palette_complete() {
         return 1
     fi
     # Здесь я считаю палитру устаревшей, если после сборки обновились шаблоны, config.toml или сами обои (git pull)
-    for source in "$matugen_config" "$(dirname "$matugen_config")"/templates/* "$(cat "$state_file" 2>/dev/null)"; do
+    for source in "${BASH_SOURCE[0]}" "$matugen_config" "$(dirname "$matugen_config")"/templates/* "$(cat "$state_file" 2>/dev/null)"; do
         if [[ -n "$source" && "$source" -nt "$palette_ok" ]]; then
             return 1
         fi

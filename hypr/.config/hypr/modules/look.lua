@@ -2,12 +2,14 @@
 -- This work made by Anfinogentov Nikita
 
 -- Здесь я беру цвета рамок из файла matugen; если его ещё нет, остаются запасные
-local active_border = "rgba(8ab4f8ee)"
+local active_border = { colors = { "rgba(8ab4f8ff)", "rgba(cba6f7ff)", "rgba(f5c2e7ff)" }, angle = 45 }
+local glow_color = "rgba(8ab4f855)"
 local inactive_border = "rgba(44474eaa)"
 local loaded, palette = pcall(require, "modules.colors")
 if loaded and type(palette) == "table" then
     active_border = palette.active_border or active_border
     inactive_border = palette.inactive_border or inactive_border
+    glow_color = palette.glow or glow_color
 end
 
 hl.config({
@@ -32,6 +34,14 @@ hl.config({
         inactive_opacity = 0.97,
         dim_inactive = true,
         dim_strength = 0.04,
+        -- Здесь я подсвечиваю активное окно цветом обоев: оно мягко светится, остальные — нет
+        glow = {
+            enabled = true,
+            range = 14,
+            render_power = 3,
+            color = glow_color,
+            color_inactive = "rgba(00000000)",
+        },
         -- Здесь я делаю тень мягкой и широкой: окна «парят», а не обведены тёмной каймой
         shadow = {
             enabled = true,
@@ -77,12 +87,16 @@ hl.curve("ease_out_quint", { type = "bezier", points = { { 0.23, 1 }, { 0.32, 1 
 hl.curve("almost_linear", { type = "bezier", points = { { 0.5, 0.5 }, { 0.75, 1 } } })
 hl.curve("quick", { type = "bezier", points = { { 0.15, 0 }, { 0.1, 1 } } })
 hl.curve("soft", { type = "spring", mass = 1, stiffness = 238.1191, damping = 24.21279333 })
+hl.curve("bouncy", { type = "spring", mass = 1, stiffness = 260, damping = 18 })
+hl.curve("linear", { type = "bezier", points = { { 0, 0 }, { 1, 1 } } })
 
 hl.animation({ leaf = "global", enabled = true, speed = 10, bezier = "default" })
 hl.animation({ leaf = "border", enabled = true, speed = 5.39, bezier = "ease_out_quint" })
 hl.animation({ leaf = "windows", enabled = true, speed = 4.79, spring = "soft" })
-hl.animation({ leaf = "windowsIn", enabled = true, speed = 4.1, spring = "soft", style = "popin 87%" })
+hl.animation({ leaf = "windowsIn", enabled = true, speed = 4.1, spring = "bouncy", style = "popin 80%" })
 hl.animation({ leaf = "windowsOut", enabled = true, speed = 1.49, bezier = "almost_linear", style = "popin 87%" })
 hl.animation({ leaf = "fade", enabled = true, speed = 3.03, bezier = "quick" })
 hl.animation({ leaf = "layers", enabled = true, speed = 3.81, bezier = "ease_out_quint" })
-hl.animation({ leaf = "workspaces", enabled = true, speed = 1.94, bezier = "almost_linear", style = "slide" })
+hl.animation({ leaf = "workspaces", enabled = true, speed = 3.2, bezier = "ease_out_quint", style = "slidefade 12%" })
+-- Здесь я медленно вращаю градиент рамки активного окна: один оборот примерно за 6 секунд
+hl.animation({ leaf = "borderangle", enabled = true, speed = 60, bezier = "linear", style = "loop" })
