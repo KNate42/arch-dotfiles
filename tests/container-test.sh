@@ -24,6 +24,10 @@ pass() {
     printf '\033[1;32mPASS\033[0m %s\n' "$*"
 }
 
+skip() {
+    printf '\033[1;33mSKIP\033[0m %s\n' "$*"
+}
+
 as_user() {
     runuser -u "$user_name" -- env HOME="$user_home" USER="$user_name" XDG_RUNTIME_DIR=/tmp/xdg-$user_name "$@"
 }
@@ -108,7 +112,11 @@ check_dry_run() {
     local label="$1"
     step "dry-run changes nothing ($label)"
     snapshot > /tmp/before-dry
-    as_user bash "$repo_copy/install.sh" --dry-run --trust-aur > /tmp/dry-run.log 2>&1 || true
+    if as_user bash "$repo_copy/install.sh" --dry-run --trust-aur > /tmp/dry-run.log 2>&1; then
+        pass "dry-run finished without errors ($label)"
+    else
+        fail "dry-run returned an error ($label)"
+    fi
     snapshot > /tmp/after-dry
     local changed
     changed="$(compare_snapshots /tmp/before-dry /tmp/after-dry)"
@@ -173,10 +181,12 @@ check_parent_symlink_backup() {
 
 check_security() {
     step "security"
-    if nft -c -f /etc/nftables.conf; then
+    if nft -c -f /etc/nftables.conf 2>/tmp/nft.err; then
         pass "nftables config is valid"
+    elif grep -qiE 'operation not permitted|protocol not supported|cache initialization failed' /tmp/nft.err; then
+        skip "nftables config check skipped (container/kernel limit): $(tr '\n' ' ' < /tmp/nft.err)"
     else
-        fail "nftables config"
+        fail "nftables config: $(tr '\n' ' ' < /tmp/nft.err)"
     fi
     if nft -f /etc/nftables.conf 2>/tmp/nft.err && nft list table inet dots_firewall > /tmp/nft.rules; then
         cat /tmp/nft.rules
@@ -185,8 +195,10 @@ check_security() {
         else
             fail "firewall rules"
         fi
+    elif grep -qiE 'operation not permitted|protocol not supported|cache initialization failed' /tmp/nft.err; then
+        skip "firewall load skipped (container/kernel limit): $(tr '\n' ' ' < /tmp/nft.err)"
     else
-        echo "nft could not load rules here: $(cat /tmp/nft.err)"
+        fail "nft could not load rules: $(tr '\n' ' ' < /tmp/nft.err)"
     fi
     if visudo -cf /etc/sudoers.d/30-timeout >/dev/null && grep -q timestamp_timeout=5 /etc/sudoers.d/30-timeout; then
         pass "sudo timeout"

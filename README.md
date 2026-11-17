@@ -226,6 +226,18 @@ tests/                   проверка всей установки в Docker-
 - Убрать ссылки на конфиги: `cd ~/arch-dotfiles && stow -D --dir . --target ~ $(grep -v '^#' packages/stow.txt)`.
 - Правки загрузчика (если делали) — рядом с файлом лежит копия `.bak-<дата>`.
 
+## Если что-то пошло не так
+
+Подробная офлайн-памятка на случай проблем с загрузкой, чёрного экрана SDDM/Hyprland, отсутствия DNS или прерванной установки: [docs/RECOVERY.md](docs/RECOVERY.md) (из консоли: `less ~/arch-dotfiles/docs/RECOVERY.md`).
+
+Быстрый помощник из терминала или `tty`:
+
+```bash
+dots-recover info     # сводка: dkms, nvidia-smi, упавшие службы, AppArmor, DNS
+dots-recover nosddm   # отключить SDDM и запускать Hyprland вручную
+dots-recover dns      # вернуть обычный DNS через NetworkManager без DoT
+```
+
 ## Проверка
 
 ```bash

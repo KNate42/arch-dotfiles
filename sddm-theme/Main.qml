@@ -35,14 +35,64 @@ Rectangle {
         return ""
     }
 
+    function session_field(idx, role_num, use_text_at) {
+        if (use_text_at && session_combo && idx >= 0 && idx < session_combo.count) {
+            var combo_text = session_combo.textAt(idx)
+            if (combo_text) {
+                return String(combo_text)
+            }
+        }
+        if (typeof sessionModel !== "undefined" && sessionModel && sessionModel.index && sessionModel.data) {
+            var val = sessionModel.data(sessionModel.index(idx, 0), role_num)
+            if (val !== undefined && val !== null) {
+                return String(val)
+            }
+        }
+        return ""
+    }
+
+    // В SDDM SessionModel: FileRole = Qt::UserRole + 2 (258), NameRole = Qt::UserRole + 4 (260)
+    function session_is_uwsm(idx) {
+        var file_name = session_field(idx, 258, false).toLowerCase()
+        var title = session_field(idx, 260, true).toLowerCase()
+        return file_name.indexOf("uwsm") !== -1 || title.indexOf("uwsm") !== -1
+    }
+
+    // Здесь я ищу обычную сессию Hyprland без uwsm: uwsm не ставится, а по алфавиту hyprland-uwsm.desktop идёт первым
+    function find_hyprland_session() {
+        var total = session_combo ? session_combo.count : 0
+        if (total <= 0 && typeof sessionModel !== "undefined" && sessionModel) {
+            if (sessionModel.rowCount) {
+                total = sessionModel.rowCount()
+            } else if (sessionModel.count !== undefined) {
+                total = sessionModel.count
+            }
+        }
+        for (var i = 0; i < total; i++) {
+            var file_name = session_field(i, 258, false).toLowerCase()
+            var title = session_field(i, 260, true).toLowerCase()
+            var has_hyprland = file_name.indexOf("hyprland") !== -1 || title.indexOf("hyprland") !== -1
+            if (has_hyprland && !session_is_uwsm(i)) {
+                return i
+            }
+        }
+        return 0
+    }
+
+    function default_session_index() {
+        if (typeof sessionModel !== "undefined" && sessionModel
+            && sessionModel.lastIndex !== undefined && sessionModel.lastIndex !== null
+            && sessionModel.lastIndex >= 0 && !session_is_uwsm(sessionModel.lastIndex)) {
+            return sessionModel.lastIndex
+        }
+        return find_hyprland_session()
+    }
+
     readonly property int selected_session: {
         if (session_combo.currentIndex >= 0) {
             return session_combo.currentIndex
         }
-        if (typeof sessionModel !== "undefined" && sessionModel && sessionModel.lastIndex >= 0) {
-            return sessionModel.lastIndex
-        }
-        return 0
+        return default_session_index()
     }
 
     readonly property string keyboard_layout_label: {
@@ -292,7 +342,7 @@ Rectangle {
                 height: 40
                 model: typeof sessionModel !== "undefined" ? sessionModel : null
                 textRole: "name"
-                currentIndex: (typeof sessionModel !== "undefined" && sessionModel && sessionModel.lastIndex >= 0) ? sessionModel.lastIndex : 0
+                currentIndex: root_pane.default_session_index()
                 font.family: root_pane.font_family
                 font.pixelSize: 13
 
@@ -402,6 +452,7 @@ Rectangle {
     }
 
     Component.onCompleted: {
+        session_combo.currentIndex = default_session_index()
         update_clock()
         password_field.forceActiveFocus()
     }

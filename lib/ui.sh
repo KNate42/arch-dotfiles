@@ -56,6 +56,39 @@ run_cmd() {
     "$@"
 }
 
+# Здесь я сохраняю необходимость пересборки в состоянии текущего пользователя, в том числе в chroot.
+mark_initramfs_pending() {
+    local marker="$1"
+    if ! run_cmd mkdir -p "$(dirname "$marker")" || ! run_cmd touch "$marker"; then
+        oops "не смог сохранить метку пересборки initramfs: $marker"
+        return 1
+    fi
+}
+
+# Здесь я снимаю метку только после успешной сборки; dry-run не меняет ни образ, ни метку.
+rebuild_initramfs() {
+    local marker="$1"
+    mark_initramfs_pending "$marker" || return 1
+    if ! run_cmd sudo mkinitcpio -P; then
+        oops "не смог пересобрать initramfs; метка $marker сохранена для повторного запуска; не перезагружайтесь до sudo mkinitcpio -P"
+        return 1
+    fi
+    if ! run_cmd rm -f "$marker"; then
+        oops "initramfs пересобран, но не смог удалить метку $marker"
+        return 1
+    fi
+}
+
+# Здесь я выбрасываю то, что набрали заранее: случайный Enter во время длинного вывода pacman
+# иначе сразу стал бы ответом «нет» на следующий вопрос
+drain_input() {
+    local junk
+    while read -r -t 0.05 junk; do
+        :
+    done
+    return 0
+}
+
 # Спрашивает да/нет. В dry-run и без терминала ответ всегда «нет».
 ask_yes() {
     local question="$1"
@@ -68,6 +101,7 @@ ask_yes() {
         warn "нет терминала, на вопрос «$question» отвечаю «нет»"
         return 1
     fi
+    drain_input
     read -r -p "$question [y/N] " answer
     [[ "$answer" == "y" || "$answer" == "Y" || "$answer" == "yes" || "$answer" == "да" ]]
 }
@@ -81,6 +115,7 @@ ask_exact() {
         printf '\033[2m[dry-run]\033[0m спросил бы: %s — пропускаю\n' "$question"
         return 1
     fi
+    drain_input
     # В консоли установочного образа раскладка английская, поэтому вместо «да» принимаю и yes
     if [[ "$expected" == "да" ]]; then
         read -r -p "$question (введите «да» или yes): " answer
@@ -122,8 +157,10 @@ write_file_root() {
         printf '\033[2m[dry-run]\033[0m записал бы %s:\n%s\n' "$target" "$content"
         return 0
     fi
-    sudo mkdir -p "$(dirname "$target")"
-    printf '%s\n' "$content" | sudo tee "$target" >/dev/null
+    if ! sudo mkdir -p "$(dirname "$target")" || ! printf '%s\n' "$content" | sudo tee "$target" >/dev/null; then
+        oops "не смог записать $target"
+        return 1
+    fi
 }
 
 

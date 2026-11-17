@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# Emergency recovery helper: restore plain DNS via NetworkManager, disable SDDM, or print system status.
+# Usage: dots-recover dns | nosddm | info
+# This work made by Anfinogentov Nikita
+
+set -euo pipefail
+
+resolved_dropin="/etc/systemd/resolved.conf.d/20-dns-over-tls.conf"
+nm_dns_dropin="/etc/NetworkManager/conf.d/30-dns.conf"
+
+oops() {
+    printf 'Ooops.. %s\n' "$*" >&2
+}
+
+section() {
+    printf '\n=== %s ===\n' "$*"
+}
+
+# Здесь я убираю строгий DNS-over-TLS и запрет DNS в NetworkManager, чтобы работали DNS роутера и страницы входа в Wi-Fi
+restore_dns() {
+    sudo rm -f "$resolved_dropin" "$nm_dns_dropin"
+    if systemctl is-active -q systemd-resolved.service 2>/dev/null || systemctl is-enabled -q systemd-resolved.service 2>/dev/null; then
+        sudo systemctl restart systemd-resolved.service
+    fi
+    sudo systemctl restart NetworkManager.service
+    printf 'DNS через NetworkManager без шифрования DoT возвращён.\n'
+    if command -v resolvectl >/dev/null 2>&1 && resolvectl query archlinux.org >/dev/null 2>&1; then
+        printf 'Проверка DNS: archlinux.org разрешается.\n'
+    else
+        printf 'Проверьте разрешение имён: resolvectl query archlinux.org\n'
+    fi
+    printf 'Вернуть защищённый DNS-over-TLS обратно: bash ~/arch-dotfiles/install.d/45-security.sh\n'
+}
+
+# Здесь я выключаю экран входа SDDM: система загрузится в текстовую консоль, откуда Hyprland запускается вручную
+disable_sddm() {
+    sudo systemctl disable --now sddm.service
+    printf 'SDDM отключён. Запустить рабочий стол вручную: Hyprland\n'
+    printf 'Включить SDDM обратно: sudo systemctl enable --now sddm.service\n'
+}
+
+show_info() {
+    section "dkms status"
+    if command -v dkms >/dev/null 2>&1; then
+        dkms status || true
+    else
+        printf 'dkms не установлен\n'
+    fi
+    if [[ -r /sys/module/nvidia_drm/parameters/modeset ]]; then
+        printf 'nvidia_drm modeset: %s\n' "$(cat /sys/module/nvidia_drm/parameters/modeset)"
+    fi
+
+    section "nvidia-smi"
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        nvidia-smi || true
+    else
+        printf 'nvidia-smi не найден\n'
+    fi
+
+    section "systemctl --failed"
+    systemctl --failed --no-pager || true
+
+    section "aa-enabled"
+    if command -v aa-enabled >/dev/null 2>&1; then
+        aa-enabled || true
+        printf '\n'
+    else
+        printf 'aa-enabled не найден\n'
+    fi
+
+    section "resolvectl status (кратко)"
+    if command -v resolvectl >/dev/null 2>&1; then
+        resolvectl status --no-pager | grep -E '^(Global|Link |[[:space:]]*(Current Scopes|Protocols|Current DNS Server|DNS Servers|DNSOverTLS):)' || true
+    else
+        printf 'resolvectl не найден\n'
+    fi
+}
+
+usage() {
+    cat <<'EOF'
+Использование: dots-recover <команда>
+
+Команды:
+  dns      вернуть обычный DNS от роутера через NetworkManager (без DNS-over-TLS)
+  nosddm   отключить экран входа SDDM (sudo systemctl disable --now sddm.service)
+  info     показать сводку: dkms status, nvidia-smi, упавшие службы, AppArmor и DNS
+EOF
+}
+
+main() {
+    case "${1:-}" in
+        dns) restore_dns ;;
+        nosddm) disable_sddm ;;
+        info) show_info ;;
+        -h|--help) usage ;;
+        *)
+            oops "неизвестная команда: ${1:-<пусто>}"
+            usage >&2
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"

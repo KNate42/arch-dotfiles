@@ -376,5 +376,22 @@ table inet dots_firewall {
 Осталось владельцу:
 - **Бит запуска.** Репозиторий лежит на Windows (`core.filemode=false`), коммитов нет. При первом коммите выполнить `git add --chmod=+x install.sh install.d/*.sh scripts/.local/bin/* tests/*.sh`, иначе `./install.sh` на Arch ответит `Permission denied` (обход: `bash install.sh`). Тест этого не видит: он запускает `bash install.sh`.
 - В списке пакетов нет браузера и файлового менеджера — поставить после установки (`sudo pacman -S firefox`).
-- При установке с образа синхронизация времени не включается: `sudo timedatectl set-ntp true`. Arch держит часы платы в UTC, Windows — в местном времени; если Windows остаётся на втором диске, часы будут расходиться на 5 часов, пока одной из систем не сказать иначе.
+- Синхронизацию времени с 17.11 включает шаг 45 (systemd-timesyncd). Arch держит часы платы в UTC, Windows — в местном времени; если Windows остаётся на втором диске, часы будут расходиться на 5 часов, пока одной из систем не сказать иначе.
 - systemd-boot ставится на NVMe и Windows в своём меню не покажет: Windows выбирать в меню загрузки платы (F12).
+
+## Проверка в UEFI-VM (17.11.2026)
+
+Стенд: QEMU + KVM + OVMF, диск NVMe 60 ГБ, 4 ядра, 6 ГБ, без видеокарты Nvidia (пакеты драйвера ставятся, DKMS собирает модуль). Ввод — настоящий терминал (expect), ответы как у владельца: «yes» на все вопросы, пароль sudo.
+
+**Путь archinstall → `./install.sh`.** archinstall 4.5 (systemd-boot, btrfs, без шифрования) → `./install.sh`: все шаги без ошибок, ядро обновилось 7.2.11 → 7.3.4. После перезагрузки: systemd-boot грузит с `lsm=landlock,lockdown,yama,integrity,apparmor,bpf`, `aa-enabled` = Yes, 161 профиль; запись rescue есть (multi-user без SDDM); строгий DoT через Quad9 и HTTPS работают; SDDM с темой dots, сессия Hyprland; после входа Hyprland 0.57.2, панель Quickshell, обои, hypridle, cliphist, kitty, fish, starship; `hyprctl configerrors` пусто; DKMS nvidia собран под 7.3.4 и лежит в initramfs; Java 21; `systemctl --failed` пусто. Повторные запуски `./install.sh` ничего не ломают.
+
+**Путь `./install.sh --from-iso`** (живой образ 2026.11.01, ввод на последовательной консоли): разметка, pacstrap, systemd-boot, chroot-часть, yay и AUR с просмотром PKGBUILD — код 0, «dotfiles установлены в новую систему». После загрузки с диска — экран входа SDDM с темой dots, сессия Hyprland.
+
+Найдено и исправлено по ходу:
+
+1. **`sudo -v` в chroot просил пароль**, хотя действовал временный NOPASSWD: при `verifypw=all` `-v` требует пароль, если NOPASSWD стоит не на всех правилах пользователя. Теперь сначала `sudo -n true`.
+2. **Лишний Enter, нажатый во время длинного вывода pacman, становился ответом «нет»** на следующий вопрос (на консоли образа так провалились yay и AUR). Теперь `ask_yes`/`ask_exact` перед вопросом выбрасывают набранное заранее (`drain_input`).
+3. По аудиту: DoT больше не ослабляется автоматически (при сбое — громкое предупреждение и `dots-recover dns`); вместо записи на несуществующий fallback-образ — запись rescue; пересборка initramfs помнит незавершённую сборку (метка в `~/.local/state/dots`) и повторяет её после установки заголовков; возраст образов проверяется от root (`/boot` смонтирован с `dmask=0077`).
+4. Добавлены `docs/RECOVERY.md` (офлайн-памятка) и `dots-recover` (`dns`, `nosddm`, `info`).
+
+Не проверено в VM: настоящая Nvidia (modeset, сон), телевизор и звук по HDMI, Wi-Fi, `--secure-boot`, `--apparmor-d`.

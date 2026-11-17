@@ -70,7 +70,9 @@ main() {
     check_user
     check_network
     if [[ "$dry_run" == 0 ]]; then
-        sudo -v
+        # Здесь я сначала пробую без пароля: при установке с образа действует временный NOPASSWD,
+        # а sudo -v всё равно требует пароль, если у пользователя есть и обычное правило wheel
+        sudo -n true 2>/dev/null || sudo -v
     fi
     remove_leftover_nopasswd
     enable_multilib

@@ -225,10 +225,13 @@ configure_system() {
 
     arch-chroot "$mount_root" bootctl install || arch-chroot "$mount_root" bootctl update
     printf 'default arch.conf\ntimeout 3\nconsole-mode max\neditor no\n' > "$mount_root/boot/loader/loader.conf"
+    # Здесь я сохраняю загрузку без новых lsm/nvidia-параметров до записи основного пункта.
+    if [[ ! -f "$mount_root/boot/loader/entries/arch-rescue.conf" ]]; then
+        printf 'title   Arch Linux (rescue)\nlinux   /vmlinuz-linux\ninitrd  /initramfs-linux.img\noptions root=UUID=%s rootflags=subvol=@ rw systemd.unit=multi-user.target\n' \
+            "$root_uuid" > "$mount_root/boot/loader/entries/arch-rescue.conf"
+    fi
     printf 'title   Arch Linux\nlinux   /vmlinuz-linux\ninitrd  /initramfs-linux.img\noptions %s\n' \
         "$boot_options" > "$mount_root/boot/loader/entries/arch.conf"
-    printf 'title   Arch Linux (fallback)\nlinux   /vmlinuz-linux\ninitrd  /initramfs-linux-fallback.img\noptions %s\n' \
-        "$boot_options" > "$mount_root/boot/loader/entries/arch-fallback.conf"
 
     arch-chroot "$mount_root" systemctl enable NetworkManager.service
 }

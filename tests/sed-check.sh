@@ -72,7 +72,11 @@ sudo() { "\$@"; }
 bootctl() { if [[ "\$*" == *is-installed* ]]; then return 0; fi; printf '%s\n' "$boot"; }
 add_kernel_param "nvidia_drm.modeset=1"
 RUNNER
-    printf 'yes\n' | script -qec "bash $runner" /dev/null > "$work_dir/prompt.log" 2>&1 || true
+    # Здесь я отвечаю, как человек, только после появления вопроса: набранное заранее ui.sh выбрасывает
+    local log="$work_dir/prompt.log"
+    : > "$log"
+    { for _ in $(seq 1 100); do grep -q 'y/N' "$log" && break; sleep 0.1; done; sleep 0.3; printf 'yes\n'; } \
+        | script -qec "bash $runner" /dev/null > "$log" 2>&1 || true
     expect "systemd-boot entry patched after a typed yes" "$boot/loader/entries/arch.conf" \
         'options root=UUID=abc rw nvidia_drm.modeset=1'
 }

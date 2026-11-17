@@ -74,9 +74,15 @@ setup_firewall() {
         run_cmd sudo cp -a /etc/nftables.conf /etc/nftables.conf.orig
     fi
     write_file_root /etc/nftables.conf "$(nftables_config)"
-    if [[ "$dry_run" == 0 ]] && ! sudo nft -c -f /etc/nftables.conf; then
-        oops "nft не принял /etc/nftables.conf"
-        return 1
+    if [[ "$dry_run" == 0 ]]; then
+        # Здесь я откладываю проверку на новом ядре: nft -c тоже обращается к модулям работающего ядра.
+        if in_chroot || [[ ! -f "/usr/lib/modules/$(uname -r)/modules.dep" ]]; then
+            warn "модули работающего ядра недоступны или это chroot; проверка nftables отложена до перезагрузки"
+            warn "после перезагрузки проверьте: sudo nft -c -f /etc/nftables.conf && systemctl status nftables.service"
+        elif ! sudo nft -c -f /etc/nftables.conf; then
+            oops "nft не принял /etc/nftables.conf"
+            return 1
+        fi
     fi
     enable_unit nftables.service
 }
@@ -126,7 +132,10 @@ warn_existing_networks() {
     if [[ "$dry_run" == 1 ]] || ! docker info >/dev/null 2>&1; then
         return 0
     fi
-    networks="$(docker network ls --filter driver=bridge --format '{{.Name}}' | grep -vx bridge || true)"
+    if ! networks="$(docker network ls --filter driver=bridge --format '{{.Name}}' | sed '/^bridge$/d')"; then
+        warn "не смог проверить существующие сети Docker: проверьте docker network ls"
+        return 0
+    fi
     if [[ -n "$networks" ]]; then
         warn "эти сети Docker созданы раньше и публикуют порты на все адреса, пока их не пересоздать (docker compose down && up): $(tr '\n' ' ' <<< "$networks")"
     fi
@@ -145,6 +154,12 @@ setup_mac_randomization() {
 # DNS-over-TLS строгий (yes): если TLS не получился, запрос не уходит открытым текстом.
 # NetworkManager перестаёт раздавать DNS от роутера (dns=none), иначе запросы шли бы и туда без шифрования.
 setup_dns() {
+    enable_unit systemd-timesyncd.service
+    enable_unit systemd-resolved.service
+    if [[ "$dry_run" == 0 ]] && ! in_chroot && ! systemd-detect-virt --container >/dev/null 2>&1; then
+        # Здесь я запускаю синхронизацию времени до проверки сертификата DNS-сервера.
+        run_cmd sudo systemctl start systemd-timesyncd.service
+    fi
     write_file_root /etc/systemd/resolved.conf.d/20-dns-over-tls.conf "$(printf '%s\n' \
         '[Resolve]' \
         "DNS=$dns_servers" \
@@ -153,8 +168,33 @@ setup_dns() {
         'Domains=~.' \
         'FallbackDNS=')"
     write_file_root /etc/NetworkManager/conf.d/30-dns.conf "$(printf '%s\n' '[main]' 'dns=none' 'systemd-resolved=false')"
-    enable_unit systemd-resolved.service
+    if [[ "$dry_run" == 0 ]] && { in_chroot || systemd-detect-virt --container >/dev/null 2>&1; }; then
+        # Здесь я сохраняю строгий DoT: проверить его смогу после первой загрузки системы.
+        warn "это chroot или контейнер: DNSOverTLS=yes сохранён; проверка строгого DoT отложена до первой загрузки"
+        warn "после первой загрузки проверьте: timeout 30s resolvectl query --cache=no archlinux.org"
+        return 0
+    fi
+    if [[ "$dry_run" == 0 ]] && systemctl is-active -q NetworkManager.service; then
+        run_cmd sudo systemctl reload NetworkManager.service
+    fi
+    # Здесь я перечитываю конфиг и при уже правильной ссылке resolv.conf.
+    run_cmd sudo systemctl restart systemd-resolved.service
     link_resolv_conf
+    if [[ "$dry_run" == 1 ]]; then
+        say "[dry-run] проверил бы строгий DoT: timeout 30s resolvectl query --cache=no archlinux.org"
+        return 0
+    fi
+    if timeout 30s resolvectl query --cache=no archlinux.org; then
+        good "строгий DNS-over-TLS работает"
+        return 0
+    fi
+    # Здесь я предупреждаю о сбое DNS, сохраняя строгий DoT и продолжая установку служб.
+    warn "ВНИМАНИЕ: строгий DoT не разрешил archlinux.org за 30 секунд; DNS сейчас может не работать! DNSOverTLS=yes сохранён"
+    warn "частые причины: неверные часы или провайдер блокирует TCP 853; проверьте timedatectl status и resolvectl status"
+    warn "повторить проверку: timeout 30s resolvectl query --cache=no archlinux.org"
+    warn "ослабить защиту DNS вручную (разрешить незашифрованный DNS): dots-recover dns"
+    warn "до шага 55-stow или если команда не найдена: ~/arch-dotfiles/scripts/.local/bin/dots-recover dns"
+    return 0
 }
 
 link_resolv_conf() {
@@ -173,8 +213,6 @@ link_resolv_conf() {
         say "это chroot: ссылку /etc/resolv.conf поставит установщик с образа"
         return 0
     fi
-    # Сначала запускаю resolved с новым конфигом, иначе после смены ссылки до перезагрузки не будет DNS
-    run_cmd sudo systemctl restart systemd-resolved.service
     run_cmd sudo ln -sf "$stub" /etc/resolv.conf
 }
 
@@ -198,7 +236,11 @@ setup_sudo_timeout() {
         rm -f "$draft"
         return 1
     fi
-    sudo install -m 440 -o root -g root "$draft" "$target"
+    if ! sudo install -m 440 -o root -g root "$draft" "$target"; then
+        oops "не смог установить $target"
+        rm -f "$draft"
+        return 1
+    fi
     rm -f "$draft"
 }
 
