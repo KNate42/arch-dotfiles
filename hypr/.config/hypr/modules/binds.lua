@@ -4,6 +4,7 @@
 local main_mod = "SUPER"
 local terminal = "kitty"
 local launcher = "rofi -show drun"
+local file_manager = "thunar"
 -- bin_dir = мои скрипты из пакета scripts; полный путь, чтобы не зависеть от PATH сессии
 local bin_dir = (os.getenv("HOME") or "") .. "/.local/bin/"
 
@@ -14,6 +15,7 @@ end
 hl.bind(key("Return"), hl.dsp.exec_cmd(terminal))
 hl.bind(key("Q"), hl.dsp.window.close())
 hl.bind(key("D"), hl.dsp.exec_cmd(launcher))
+hl.bind(key("E"), hl.dsp.exec_cmd(file_manager))
 hl.bind(key("F"), hl.dsp.window.fullscreen({ mode = "fullscreen" }))
 hl.bind(key("SHIFT + F"), hl.dsp.window.fullscreen({ mode = "maximized" }))
 hl.bind(key("SPACE"), hl.dsp.window.float({ action = "toggle" }))

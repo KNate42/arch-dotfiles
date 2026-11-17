@@ -95,3 +95,7 @@ jdk21-openjdk
 jdk17-openjdk
 jdk11-openjdk
 jdk8-openjdk
+thunar
+thunar-archive-plugin
+file-roller
+telegram-desktop

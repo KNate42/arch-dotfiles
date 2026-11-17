@@ -8,6 +8,19 @@ if not string.find(path, home .. "/.local/bin", 1, true) then
     hl.env("PATH", home .. "/.local/bin:" .. path)
 end
 
+-- Здесь я добавляю каталоги Flatpak: без них rofi не видит Flatpak-приложения (Sober и другие).
+-- SDDM не читает /etc/profile.d/flatpak.sh, поэтому в сессии XDG_DATA_DIRS пустой
+local data_dirs = os.getenv("XDG_DATA_DIRS")
+if data_dirs == nil or data_dirs == "" then
+    data_dirs = "/usr/local/share:/usr/share"
+end
+for _, dir in ipairs({ "/var/lib/flatpak/exports/share", home .. "/.local/share/flatpak/exports/share" }) do
+    if not string.find(data_dirs, dir, 1, true) then
+        data_dirs = dir .. ":" .. data_dirs
+    end
+end
+hl.env("XDG_DATA_DIRS", data_dirs)
+
 hl.env("XCURSOR_THEME", "Bibata-Modern-Classic")
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
