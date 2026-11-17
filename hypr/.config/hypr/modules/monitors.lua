@@ -7,7 +7,7 @@ local tv_workspaces = { 6, 7, 8, 9 }
 local tv_audio = (os.getenv("HOME") or "") .. "/.local/bin/tv-audio"
 
 -- Любой монитор без своего правила: родное разрешение, справа от остальных
-hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 1 })
+hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 0.9375 })
 
 hl.monitor({ output = "desc:" .. tv_desc, mode = "preferred", position = "auto-right", scale = 1 })
 
