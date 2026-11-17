@@ -1,0 +1,12 @@
+/* rofi clipboard history look: the launcher theme with its own title (Super+V) */
+/* This work made by Anfinogentov Nikita */
+
+@theme "theme.rasi"
+
+textbox-greeting {
+    str: "Буфер обмена";
+}
+
+entry {
+    placeholder: "Поиск в истории…";
+}

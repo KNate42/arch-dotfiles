@@ -6,9 +6,9 @@ configuration {
     show-icons: true;
     icon-theme: "Papirus-Dark";
     font: "Inter 12";
-    display-drun: "";
-    display-run: "";
-    display-window: "";
+    display-drun: "󰀻  Приложения";
+    display-run: "󰆍  Команды";
+    display-window: "󰖳  Окна";
     drun-display-format: "{name}";
 }
 

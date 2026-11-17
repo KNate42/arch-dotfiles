@@ -20,7 +20,7 @@ hl.bind(key("SPACE"), hl.dsp.window.float({ action = "toggle" }))
 hl.bind(key("Escape"), hl.dsp.exec_cmd("pidof hyprlock || hyprlock"))
 hl.bind(key("W"), hl.dsp.exec_cmd("qs ipc call wallpaper toggle"))
 hl.bind(key("A"), hl.dsp.exec_cmd("qs ipc call control toggle"))
-hl.bind(key("V"), hl.dsp.exec_cmd("cliphist list | rofi -dmenu -p clipboard | cliphist decode | wl-copy"))
+hl.bind(key("V"), hl.dsp.exec_cmd("cliphist list | rofi -dmenu -p clipboard -theme clipboard | cliphist decode | wl-copy"))
 -- Здесь я открываю меню питания вместо мгновенного выхода: случайное нажатие больше не закрывает сессию
 hl.bind(key("SHIFT + E"), hl.dsp.exec_cmd("qs ipc call power toggle"))
 hl.bind(key("CTRL + SHIFT + E"), hl.dsp.exit())
