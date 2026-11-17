@@ -4,9 +4,9 @@
 @theme "theme.rasi"
 
 textbox-greeting {
-    str: "Буфер обмена";
+    str: ">> CLIPBOARD_";
 }
 
 entry {
-    placeholder: "Поиск в истории…";
+    placeholder: "поиск в истории_";
 }

@@ -1,115 +1,62 @@
-// Expanded island volume OSD view with mute icon, gradient level bar and percentage readout
+// HUD volume readout with mute action and segmented click target
 // This work made by Anfinogentov Nikita
 
 import QtQuick
 import "../theme"
+import "../control"
 
 Item {
     id: volume_view_root
-
     property string volume_icon: "󰕾"
     property bool is_muted: false
-    property real clamped_level: 0.0
+    property real clamped_level: 0
     property int volume_percent: 0
-
     signal mute_toggled()
     signal level_selected(real ratio)
-
-    // Здесь я выравниваю иконку, ползунок и процент внутри капсулы 320x44 с фиксированной шириной подписи
-    Text {
-        id: vol_glyph // vol = volume
-        anchors {
-            left: parent.left
-            leftMargin: Style.space_lg
-            verticalCenter: parent.verticalCenter
-        }
+    function glitch() { percent_label.glitch(); }
+    onIs_mutedChanged: Qt.callLater(() => { if (visible) glitch(); })
+    // Здесь я сохраняю независимую кнопку mute слева от шкалы.
+    NeonText {
+        id: vol_glyph
+        anchors { left: parent.left; leftMargin: Style.space_lg; verticalCenter: parent.verticalCenter }
         text: volume_view_root.volume_icon
-        font.family: Style.font_mono
-        font.pixelSize: Style.text_lg
-        color: volume_view_root.is_muted ? Colors.on_surface_variant : Colors.primary
-
+        color: Colors.mint
+        pixel_size: Style.text_lg
         MouseArea {
-            id: icon_mouse
-            anchors {
-                fill: parent
-                margins: -4
-            }
+            anchors.fill: parent
+            anchors.margins: -4
             cursorShape: Qt.PointingHandCursor
             onClicked: volume_view_root.mute_toggled()
         }
     }
-
-    Text {
+    NeonText {
         id: percent_label
-        anchors {
-            right: parent.right
-            rightMargin: Style.space_lg
-            verticalCenter: parent.verticalCenter
-        }
-        width: 42
-        horizontalAlignment: Text.AlignRight
-        text: volume_view_root.is_muted ? "MUTE" : (volume_view_root.volume_percent + "%")
-        font.family: Style.font_ui
-        font.pixelSize: Style.text_sm
-        font.weight: Font.DemiBold
-        color: volume_view_root.is_muted ? Colors.on_surface_variant : Colors.on_surface
+        anchors { right: parent.right; rightMargin: Style.space_lg; verticalCenter: parent.verticalCenter }
+        text: volume_view_root.is_muted ? "MUTE" : volume_view_root.volume_percent + "%"
+        color: Colors.mint
+        glow_color: Colors.mint
+        pixel_size: Style.text_sm
     }
-
-    Rectangle {
+    SegmentBar {
         id: slider_track
         anchors {
-            left: vol_glyph.right
-            leftMargin: Style.space_md
-            right: percent_label.left
-            rightMargin: Style.space_sm
+            left: vol_glyph.right; leftMargin: Style.space_md
+            right: percent_label.left; rightMargin: Style.space_md
             verticalCenter: parent.verticalCenter
         }
-        height: 6
-        radius: Style.radius_pill
-        color: Style.alpha(Colors.surface_variant, 0.80)
-
-        // Здесь я заливаю ползунок градиентом primary → tertiary, а в режиме mute приглушаю цвет до outline
-        Rectangle {
-            id: slider_fill
-            width: parent.width * Math.max(0.0, Math.min(1.0, volume_view_root.clamped_level))
-            height: parent.height
-            radius: Style.radius_pill
-
-            gradient: Gradient {
-                orientation: Gradient.Horizontal
-
-                GradientStop {
-                    position: 0.0
-                    color: volume_view_root.is_muted ? Colors.outline : Colors.primary
-                }
-
-                GradientStop {
-                    position: 1.0
-                    color: volume_view_root.is_muted ? Colors.outline_variant : Colors.tertiary
-                }
-            }
-
-            Behavior on width {
-                NumberAnimation {
-                    duration: Style.motion_fast
-                    easing.type: Style.easing
-                }
-            }
-        }
-
+        count: 18
+        accent: Colors.mint
+        value: volume_view_root.clamped_level
+        muted: volume_view_root.is_muted
+        // Здесь я перевожу координату клика в прежний сигнал выбора громкости.
         MouseArea {
-            id: track_mouse
-            anchors {
-                fill: parent
-                topMargin: -8
-                bottomMargin: -8
-            }
+            anchors.fill: parent
+            anchors.topMargin: -8
+            anchors.bottomMargin: -8
             cursorShape: Qt.PointingHandCursor
             onClicked: mouse => {
-                if (slider_track.width > 0) {
-                    const ratio = Math.max(0.0, Math.min(1.0, mouse.x / slider_track.width));
-                    volume_view_root.level_selected(ratio);
-                }
+                if (slider_track.width > 0)
+                    volume_view_root.level_selected(Math.max(0, Math.min(1, mouse.x / slider_track.width)));
             }
         }
     }

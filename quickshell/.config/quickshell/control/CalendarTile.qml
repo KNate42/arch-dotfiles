@@ -1,4 +1,4 @@
-// Russian current-month calendar bento tile with Monday-first layout and primary circle for today
+// Monospaced Monday-first calendar with magenta selection for today
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -66,8 +66,10 @@ BentoTile {
             Text {
                 id: cal_icon
                 anchors.verticalCenter: parent.verticalCenter
-                text: "󰃭"
-                font.family: Style.font_mono
+                text: "//"
+                font.family: Style.font_hud
+                font.capitalization: Font.AllUppercase
+                font.letterSpacing: 0
                 font.pixelSize: Style.text_md
                 color: Colors.primary
             }
@@ -75,9 +77,12 @@ BentoTile {
             Text {
                 id: cal_title
                 anchors.verticalCenter: parent.verticalCenter
+                width: Math.max(0, cal_header_row.width - cal_icon.width - cal_header_row.spacing)
                 text: calendar_root.month_title
-                font.family: Style.font_ui
-                font.pixelSize: Style.text_sm
+                font.family: Style.font_hud
+                font.capitalization: Font.AllUppercase
+                font.letterSpacing: 0
+                font.pixelSize: 10
                 font.weight: Font.DemiBold
                 color: Colors.on_surface
                 elide: Text.ElideRight
@@ -99,7 +104,9 @@ BentoTile {
                     width: weekdays_row.width / 7
                     text: weekday_label.modelData
                     horizontalAlignment: Text.AlignHCenter
-                    font.family: Style.font_ui
+                    font.family: Style.font_hud
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: 0
                     font.pixelSize: 10
                     font.weight: Font.DemiBold
                     color: weekday_label.index >= 5 ? Colors.secondary : Colors.on_surface_variant
@@ -107,7 +114,7 @@ BentoTile {
             }
         }
 
-        // Здесь я строю 42 ячейки (6 недель по 7 дней) и выделяю сегодняшнее число кружком цвета primary
+        // Здесь я строю 42 ячейки (6 недель по 7 дней) и выделяю сегодняшнее число рамкой magenta
         Grid {
             id: days_grid
             width: parent.width
@@ -130,13 +137,15 @@ BentoTile {
                     height: 21
 
                     Rectangle {
-                        id: today_circle
+                        id: today_frame
                         anchors.centerIn: parent
                         width: 21
                         height: 21
-                        radius: Style.radius_pill
+                        radius: 0
                         visible: day_cell.is_today
-                        color: Colors.primary
+                        color: Style.alpha(Colors.magenta, 0.2)
+                        border.width: 1
+                        border.color: Colors.magenta
                     }
 
                     Text {
@@ -144,11 +153,13 @@ BentoTile {
                         anchors.centerIn: parent
                         visible: day_cell.in_month
                         text: day_cell.in_month ? String(day_cell.day_num) : ""
-                        font.family: Style.font_mono
+                        font.family: Style.font_hud
+                        font.capitalization: Font.AllUppercase
+                        font.letterSpacing: 0
                         font.pixelSize: 10
                         font.weight: day_cell.is_today ? Font.Bold : Font.Medium
                         color: day_cell.is_today
-                            ? Colors.on_primary
+                            ? Colors.magenta
                             : (day_cell.is_weekend ? Colors.on_surface_variant : Colors.on_surface)
                     }
                 }

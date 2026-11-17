@@ -1,4 +1,4 @@
-// Expanded island notification card with app icon or image, summary, two-line body and click-to-invoke
+// HUD notification with application heading, typed message and default action
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -61,125 +61,103 @@ Item {
         ? String(notif_card_root.notification_data.body)
         : ""
 
-    Rectangle {
-        id: icon_box
-        anchors {
-            left: parent.left
-            leftMargin: Style.space_lg
-            verticalCenter: parent.verticalCenter
-        }
-        width: 56
-        height: 56
-        radius: Style.radius_md
-        clip: true
-        color: Style.alpha(Colors.surface_container_high, 0.85)
-        border.width: 1
-        border.color: notif_card_root.is_critical
-            ? Style.alpha(Colors.error, 0.65)
-            : Style.alpha(Colors.primary, 0.25)
-
-        Image {
-            id: notif_img // img = image
-            anchors.centerIn: parent
-            width: notif_card_root.resolved_image !== "" ? 56 : 32
-            height: notif_card_root.resolved_image !== "" ? 56 : 32
-            source: notif_card_root.effective_source
-            fillMode: notif_card_root.resolved_image !== "" ? Image.PreserveAspectCrop : Image.PreserveAspectFit
-            asynchronous: true
-            smooth: true
-            visible: notif_card_root.effective_source !== "" && notif_img.status === Image.Ready
-        }
-
-        Text {
-            id: fallback_bell
-            anchors.centerIn: parent
-            visible: notif_card_root.effective_source === "" || notif_img.status !== Image.Ready
-            text: notif_card_root.is_critical ? "󰂞" : "󰂚"
-            font.family: Style.font_mono
-            font.pixelSize: Style.text_xl
-            color: notif_card_root.is_critical ? Colors.error : Colors.primary
+    TextEdit {
+        id: body_decoder
+        visible: false
+        readOnly: true
+        textFormat: TextEdit.AutoText
+        text: notif_card_root.body_text
+    }
+    readonly property string plain_body: body_decoder.text === "" ? "" : body_decoder.getText(0, body_decoder.length)
+    readonly property string message_text: summary_text + (plain_body !== "" ? "\n" + plain_body : "")
+    readonly property var message_chars: Array.from(message_text)
+    property int typed_count: 0
+    function glitch() { app_heading.glitch(); }
+    function restart_type() {
+        type_timer.stop();
+        typed_count = 0;
+        if (notification_data && visible) {
+            type_timer.restart();
+            app_heading.glitch();
         }
     }
+    onNotification_dataChanged: Qt.callLater(restart_type)
+    onMessage_textChanged: Qt.callLater(restart_type)
+    onVisibleChanged: Qt.callLater(restart_type)
+    Component.onCompleted: restart_type()
 
-    // Здесь я размещаю заголовок, индикатор очереди и текст уведомления максимум в две строки
+    Timer {
+        id: type_timer
+        interval: Style.type_step
+        repeat: true
+        onTriggered: {
+            if (notif_card_root.typed_count < notif_card_root.message_chars.length)
+                notif_card_root.typed_count++;
+            else stop();
+        }
+    }
+    HudPanel {
+        id: icon_box
+        anchors { left: parent.left; leftMargin: Style.space_lg; verticalCenter: parent.verticalCenter }
+        width: 56; height: 56; cut: 7
+        brackets: false; scanlines: false
+        accent: Colors.magenta
+        Image {
+            id: notif_image
+            anchors.centerIn: parent
+            width: notif_card_root.resolved_image !== "" ? 42 : 32
+            height: width
+            source: notif_card_root.effective_source
+            fillMode: Image.PreserveAspectFit
+            asynchronous: true
+            visible: source !== "" && status === Image.Ready
+        }
+        NeonText {
+            anchors.centerIn: parent
+            visible: !notif_image.visible
+            text: notif_card_root.is_critical ? "󰂞" : "󰂚"
+            color: notif_card_root.is_critical ? Colors.alarm : Colors.magenta
+            pixel_size: Style.text_xl
+        }
+    }
     Column {
-        id: text_column
         anchors {
-            left: icon_box.right
-            leftMargin: Style.space_md
-            right: parent.right
-            rightMargin: Style.space_lg
+            left: icon_box.right; leftMargin: Style.space_md
+            right: parent.right; rightMargin: Style.space_lg
             verticalCenter: parent.verticalCenter
         }
-        spacing: Style.space_xs
-
+        spacing: 5
         Item {
-            id: header_line
             width: parent.width
-            height: 20
-
-            Text {
-                id: summary_label
-                anchors {
-                    left: parent.left
-                    right: meta_badge.visible ? meta_badge.left : parent.right
-                    rightMargin: meta_badge.visible ? Style.space_sm : 0
-                    verticalCenter: parent.verticalCenter
-                }
-                text: notif_card_root.summary_text
-                font.family: Style.font_ui
-                font.pixelSize: Style.text_md
-                font.weight: Font.DemiBold
-                color: notif_card_root.is_critical ? Colors.error : Colors.on_surface
-                elide: Text.ElideRight
-                maximumLineCount: 1
-            }
-
-            Rectangle {
-                id: meta_badge // meta = metadata
-                anchors {
-                    right: parent.right
-                    verticalCenter: parent.verticalCenter
-                }
-                visible: notif_card_root.queue_count > 1 || notif_card_root.app_title !== ""
-                height: 18
-                width: badge_text.implicitWidth + Style.space_sm * 2
-                radius: Style.radius_pill
-                color: notif_card_root.queue_count > 1
-                    ? Style.alpha(Colors.primary, 0.22)
-                    : Style.alpha(Colors.surface_variant, 0.65)
-
-                Text {
-                    id: badge_text
-                    anchors.centerIn: parent
-                    text: notif_card_root.queue_count > 1
-                        ? ("+" + (notif_card_root.queue_count - 1))
-                        : notif_card_root.app_title
-                    font.family: Style.font_ui
-                    font.pixelSize: Style.text_xs
-                    font.weight: Font.Medium
-                    color: notif_card_root.queue_count > 1 ? Colors.primary : Colors.on_surface_variant
-                }
+            height: app_heading.implicitHeight + 2
+            clip: true
+            NeonText {
+                id: app_heading
+                text: "// " + (notif_card_root.app_title || "NOTIFICATION")
+                    + (notif_card_root.queue_count > 1 ? " [+" + (notif_card_root.queue_count - 1) + "]" : "")
+                pixel_size: Style.text_sm
+                color: Colors.magenta
+                glow_color: Colors.magenta
             }
         }
-
+        // Здесь я фиксирую высоту сообщения, чтобы печать букв не двигала остров.
         Text {
-            id: body_label
             width: parent.width
-            visible: notif_card_root.body_text !== ""
-            text: notif_card_root.body_text
-            font.family: Style.font_ui
+            height: 54
+            text: notif_card_root.message_chars.slice(0, notif_card_root.typed_count).join("")
+            textFormat: Text.PlainText
+            font.family: Style.font_hud
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 0.5
             font.pixelSize: Style.text_sm
-            color: Colors.on_surface_variant
+            color: Colors.on_surface
             wrapMode: Text.Wrap
-            maximumLineCount: 2
+            maximumLineCount: 3
             elide: Text.ElideRight
         }
     }
-
-    // Здесь я вызываю действие по умолчанию и закрываю уведомление по клику на карточку
+    // Здесь я оставляю прежнее действие карточки и закрытие уведомления.
     MouseArea {
-        id: card_mouse
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: notif_card_root.activated()

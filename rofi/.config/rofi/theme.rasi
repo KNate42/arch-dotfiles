@@ -1,16 +1,16 @@
-/* rofi look: wallpaper panel on the left, search and apps on the right; colors from colors.rasi (matugen) */
+/* rofi look (cyberpunk HUD): wallpaper panel on the left, search and apps on the right; colors from colors.rasi (matugen) */
 /* This work made by Anfinogentov Nikita */
 
 * {
-    bg: #111318d9;
-    bg-alt: #282a2fb3;
-    fg: #e2e2e9;
-    fg-alt: #c4c6d0;
-    accent: #aac7ff;
-    accent-2: #e3bada;
-    accent-soft: #aac7ff2e;
-    on-accent: #0a305f;
-    border-col: #44474e59;
+    bg: #05040ae6;
+    bg-alt: #0c0b16f2;
+    fg: #e8f7ff;
+    fg-alt: #6f8fa0;
+    accent: #00e5ff;
+    accent-2: #ff2bd6;
+    accent-soft: #00e5ff26;
+    on-accent: #02121a;
+    border-col: #00e5ffaa;
     wallpaper: linear-gradient(135deg, #3a5ba0, #8a4fbf);
     accent-gradient: linear-gradient(to right, #aac7ff, #e3bada);
 }
@@ -29,7 +29,7 @@ window {
     width: 820px;
     border: 1px;
     border-color: @border-col;
-    border-radius: 26px;
+    border-radius: 0px;
     background-color: @bg;
     padding: 10px;
 }
@@ -44,7 +44,7 @@ mainbox {
 imagebox {
     expand: false;
     width: 280px;
-    border-radius: 18px;
+    border-radius: 0px;
     background-image: @wallpaper;
     orientation: vertical;
     padding: 18px;
@@ -53,9 +53,9 @@ imagebox {
 
 textbox-greeting {
     expand: false;
-    str: "Что запустим?";
-    font: "Inter Bold 20";
-    text-color: #ffffff;
+    str: ">> LAUNCH_";
+    font: "JetBrainsMono Nerd Font Bold 20";
+    text-color: #00e5ff;
 }
 
 mode-switcher {
@@ -65,16 +65,18 @@ mode-switcher {
 
 button {
     padding: 10px 14px;
-    border-radius: 14px;
-    background-color: #00000059;
-    text-color: #ffffffcc;
-    font: "Inter SemiBold 11";
+    border-radius: 0px;
+    background-color: #05040acc;
+    text-color: #00e5ff;
+    border: 1px;
+    border-color: #00e5ff88;
+    font: "JetBrainsMono Nerd Font Bold 10";
     horizontal-align: 0;
 }
 
 button selected {
-    background-color: #ffffffe6;
-    text-color: #111318;
+    background-color: #ff2bd6;
+    text-color: #05040a;
 }
 
 listbox {
@@ -84,10 +86,12 @@ listbox {
     children: [ inputbar, listview ];
 }
 
-/* Поле поиска-пилюля */
+/* Поле поиска: строка ввода терминала с неоновой нижней чертой */
 inputbar {
     padding: 12px 18px;
-    border-radius: 24px;
+    border: 0px 0px 2px 0px;
+    border-color: @accent;
+    border-radius: 0px;
     background-color: @bg-alt;
     children: [ textbox-search, entry ];
     spacing: 12px;
@@ -102,11 +106,11 @@ textbox-search {
 }
 
 entry {
-    placeholder: "Поиск приложений…";
+    placeholder: "поиск_";
     placeholder-color: @fg-alt;
     text-color: @fg;
     vertical-align: 0.5;
-    font: "Inter 13";
+    font: "JetBrainsMono Nerd Font 12";
 }
 
 listview {
@@ -120,14 +124,16 @@ listview {
 
 element {
     padding: 9px 12px;
-    border-radius: 16px;
+    border-radius: 0px;
     spacing: 14px;
 }
 
 /* Здесь я заливаю выбранную строку переливом из двух цветов обоев */
 element selected {
-    background-image: @accent-gradient;
+    background-color: @accent;
     text-color: @on-accent;
+    border: 0px 0px 0px 4px;
+    border-color: @accent-2;
 }
 
 element-icon {
@@ -138,5 +144,5 @@ element-icon {
 element-text {
     text-color: inherit;
     vertical-align: 0.5;
-    font: "Inter Medium 12";
+    font: "JetBrainsMono Nerd Font Medium 11";
 }

@@ -63,6 +63,16 @@ Singleton {
     readonly property int tile_gap: 10
     readonly property int tile_radius: 20
 
+    // HUD: скошенные углы, неоновая рамка со свечением, скан-линии, моноширинный шрифт капсом
+    readonly property string font_hud: "JetBrainsMono Nerd Font"
+    readonly property int chamfer: 12
+    readonly property real hud_fill_opacity: 0.80
+    readonly property real hud_glow_opacity: 0.45
+    readonly property real scanline_opacity: 0.05
+    readonly property real hud_letter_spacing: 1.6
+    readonly property int glitch_duration: 140
+    readonly property int type_step: 22
+
     // Здесь я делаю цвет полупрозрачным, не трогая сам цвет темы
     function alpha(base, amount) { // base = theme color, amount = opacity 0..1
         return Qt.rgba(base.r, base.g, base.b, amount);

@@ -1,4 +1,4 @@
-// Thick iOS-style draggable PipeWire volume and microphone sliders with percentages
+// PipeWire audio controls with neon segment meters and persistent drag targets
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -110,7 +110,7 @@ BentoTile {
             readonly property var slider_values: [
                 {
                     is_mic: false,
-                    title: "Громкость",
+                    title: "OUTPUT",
                     icon: sliders_root.sink_icon,
                     level: sliders_root.sink_level,
                     percent: sliders_root.sink_percent,
@@ -119,7 +119,7 @@ BentoTile {
                 },
                 {
                     is_mic: true,
-                    title: "Микрофон",
+                    title: "MIC",
                     icon: sliders_root.source_icon,
                     level: sliders_root.source_level,
                     percent: sliders_root.source_percent,
@@ -128,142 +128,77 @@ BentoTile {
                 }
             ]
 
-            delegate: Rectangle {
+            delegate: HudPanel {
                 id: thick_slider
                 required property int index
-                readonly property var slider_data: parent_slider_model.slider_values[thick_slider.index]
-
+                readonly property var slider_data: parent_slider_model.slider_values[index]
                 width: sliders_column.width
-                height: 44
-                radius: 14
-                color: Style.alpha(Colors.surface_container_high, 0.88)
-                border.width: 1
-                border.color: slider_mouse.pressed
-                    ? Colors.primary
-                    : Style.alpha(Colors.outline_variant, Style.glass_border_opacity)
-                clip: true
-
-                readonly property bool over_left_label: !thick_slider.slider_data.muted && thick_slider.slider_data.level > 0.32
-                readonly property bool over_right_label: !thick_slider.slider_data.muted && thick_slider.slider_data.level > 0.86
-
-                Rectangle {
-                    id: slider_fill
-                    anchors {
-                        left: parent.left
-                        top: parent.top
-                        bottom: parent.bottom
-                    }
-                    width: Math.max(0, Math.min(1, thick_slider.slider_data.level)) * parent.width
-                    radius: parent.radius
-                    color: thick_slider.slider_data.muted
-                        ? Style.alpha(Colors.on_surface_variant, 0.32)
-                        : Colors.primary
-
-                    Behavior on width {
-                        enabled: !slider_mouse.pressed
-                        NumberAnimation {
-                            duration: Style.motion_fast
-                            easing.type: Style.easing
-                        }
-                    }
-
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: Style.motion_fast
-                            easing.type: Style.easing
-                        }
-                    }
-                }
-
+                height: 54
+                cut: 6
+                brackets: false
+                scanlines: false
+                accent: slider_data.is_mic ? Colors.magenta : Colors.mint
+                active: slider_mouse.containsMouse
                 Row {
-                    id: left_info
-                    anchors {
-                        left: parent.left
-                        leftMargin: Style.space_md
-                        verticalCenter: parent.verticalCenter
-                    }
-                    spacing: Style.space_sm
-
+                    x: 12; y: 7; spacing: 8
+                    NeonText { text: thick_slider.slider_data.icon; color: thick_slider.accent; pixel_size: Style.text_md }
                     Text {
-                        id: slider_icon_text
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: thick_slider.slider_data.icon
-                        font.family: Style.font_mono
-                        font.pixelSize: 18
-                        color: thick_slider.over_left_label ? Colors.on_primary : Colors.on_surface
-                    }
-
-                    Text {
-                        id: slider_title_text
-                        anchors.verticalCenter: parent.verticalCenter
                         text: thick_slider.slider_data.title
-                        font.family: Style.font_ui
-                        font.pixelSize: Style.text_sm
-                        font.weight: Font.Medium
-                        color: thick_slider.over_left_label ? Colors.on_primary : Colors.on_surface
+                        font.family: Style.font_hud
+                        font.capitalization: Font.AllUppercase
+                        font.letterSpacing: Style.hud_letter_spacing
+                        font.pixelSize: Style.text_xs
+                        color: Colors.on_surface
                     }
                 }
-
                 Text {
-                    id: percent_label
-                    anchors {
-                        right: parent.right
-                        rightMargin: Style.space_md
-                        verticalCenter: parent.verticalCenter
-                    }
-                    text: !thick_slider.slider_data.available
-                        ? "--"
-                        : (thick_slider.slider_data.muted
-                            ? ("MUTE · " + thick_slider.slider_data.percent + "%")
-                            : (thick_slider.slider_data.percent + "%"))
-                    font.family: Style.font_mono
-                    font.pixelSize: Style.text_sm
-                    font.weight: Font.DemiBold
-                    color: thick_slider.over_right_label
-                        ? Colors.on_primary
-                        : (thick_slider.slider_data.muted ? Colors.on_surface_variant : Colors.on_surface)
+                    anchors { right: parent.right; rightMargin: 12; top: parent.top; topMargin: 7 }
+                    text: !thick_slider.slider_data.available ? "--" :
+                        (thick_slider.slider_data.muted ? "MUTE / " : "") + thick_slider.slider_data.percent + "%"
+                    font.family: Style.font_hud
+                    font.pixelSize: Style.text_xs
+                    color: thick_slider.accent
                 }
-
-                // Здесь я разделяю короткий клик по иконке слева (переключение mute) и перетаскивание ползунка мышью
+                SegmentBar {
+                    id: slider_segments
+                    x: 44; y: 32
+                    width: Math.max(0, thick_slider.width - x - 12)
+                    height: 10
+                    value: thick_slider.slider_data.level
+                    muted: thick_slider.slider_data.muted
+                    accent: thick_slider.accent
+                }
+                // Здесь я сохраняю захват мыши и вычисляю уровень по видимой сегментной шкале.
                 MouseArea {
                     id: slider_mouse
                     anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
-
                     property real press_start_x: 0
                     property bool dragged: false
-
+                    function set_from_x(point_x) {
+                        if (slider_segments.width > 0)
+                            sliders_root.set_audio_level(thick_slider.slider_data.is_mic,
+                                (point_x - slider_segments.x) / slider_segments.width);
+                    }
                     onPressed: mouse => {
-                        slider_mouse.press_start_x = mouse.x;
-                        slider_mouse.dragged = false;
-                        if (mouse.x > 40) {
-                            sliders_root.set_audio_level(thick_slider.slider_data.is_mic, mouse.x / thick_slider.width);
-                        }
+                        press_start_x = mouse.x;
+                        dragged = false;
+                        if (mouse.x > 40) set_from_x(mouse.x);
                     }
-
                     onPositionChanged: mouse => {
-                        if (!slider_mouse.pressed) {
-                            return;
-                        }
-                        if (Math.abs(mouse.x - slider_mouse.press_start_x) > 4 || slider_mouse.press_start_x > 40) {
-                            slider_mouse.dragged = true;
-                            sliders_root.set_audio_level(thick_slider.slider_data.is_mic, mouse.x / thick_slider.width);
+                        if (pressed && (Math.abs(mouse.x - press_start_x) > 4 || press_start_x > 40)) {
+                            dragged = true;
+                            set_from_x(mouse.x);
                         }
                     }
-
-                    onReleased: mouse => {
-                        if (!slider_mouse.dragged && slider_mouse.press_start_x <= 40) {
+                    onReleased: {
+                        if (!dragged && press_start_x <= 40)
                             sliders_root.toggle_audio_mute(thick_slider.slider_data.is_mic);
-                        }
                     }
-
                     onWheel: wheel => {
-                        const step = wheel.angleDelta.y > 0 ? 0.05 : -0.05;
-                        sliders_root.set_audio_level(
-                            thick_slider.slider_data.is_mic,
-                            thick_slider.slider_data.level + step
-                        );
+                        sliders_root.set_audio_level(thick_slider.slider_data.is_mic,
+                            thick_slider.slider_data.level + (wheel.angleDelta.y > 0 ? 0.05 : -0.05));
                     }
                 }
             }

@@ -1,4 +1,4 @@
-// Focused-monitor glass control center with spring motion, outside dismissal and bento settings
+// Focused-monitor HUD status terminal with spring motion and staggered tiles
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -66,7 +66,7 @@ Scope {
             right: true
         }
 
-        // Здесь я сразу освобождаю ввод при закрытии, пока стекло ещё доигрывает анимацию.
+        // Здесь я сразу освобождаю ввод при закрытии, пока панель ещё доигрывает анимацию.
         mask: Region { item: Panels.control_open ? key_catcher : null }
 
         FocusScope {
@@ -85,17 +85,15 @@ Scope {
                 onClicked: Panels.control_open = false
             }
 
-            Rectangle {
+            HudPanel {
                 id: panel_card
                 property real slide_progress: control_root.entered ? 1 : 0
                 x: parent.width - width - 10 + (1 - slide_progress) * (width + 10)
                 y: 10
                 width: Math.min(Style.control_width, Math.max(0, parent.width - 20))
                 height: Math.max(0, parent.height - 20)
-                radius: Style.radius_lg
-                color: Style.alpha(Colors.surface, Style.glass_opacity)
-                border.width: 1
-                border.color: Style.alpha(Colors.outline_variant, Style.glass_border_opacity)
+                accent: Colors.cyan
+                active: true
                 opacity: control_root.entered ? 1 : 0
 
                 Behavior on slide_progress {
@@ -144,8 +142,8 @@ Scope {
                         Row {
                             width: parent.width
                             spacing: Style.tile_gap
-                            CalendarTile { width: (parent.width - parent.spacing) / 2 }
-                            SystemTile { width: (parent.width - parent.spacing) / 2 }
+                            CalendarTile { width: (parent.width - parent.spacing) * 0.55 }
+                            SystemTile { width: (parent.width - parent.spacing) * 0.45 }
                         }
 
                         TrayTile { width: parent.width }

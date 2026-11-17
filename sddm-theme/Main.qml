@@ -10,7 +10,7 @@ Rectangle {
     height: 1080
     color: surface_color
 
-    readonly property string font_family: "Inter"
+    readonly property string font_family: "JetBrainsMono Nerd Font"
 
     // Здесь я делаю цвет полупрозрачным для стеклянных карточек и мягких кнопок
     function alpha(base, amount) {
@@ -200,15 +200,15 @@ Rectangle {
             }
         }
 
-        // Стеклянная карточка входа с полупрозрачным фоном и тонкой рамкой
+        // Карточка входа в стиле HUD: прямые углы, тёмный фон и неоновая рамка
         Rectangle {
             id: login_card
             width: parent.width
             height: card_column.implicitHeight + 48
-            radius: 18
+            radius: 0
             color: root_pane.alpha(root_pane.surface_container_color, 0.72)
             border.width: 1
-            border.color: root_pane.alpha(root_pane.outline_color, 0.35)
+            border.color: root_pane.alpha(root_pane.outline_color, 0.85)
 
             Column {
                 id: card_column
@@ -252,7 +252,7 @@ Rectangle {
                     }
 
                     background: Rectangle {
-                        radius: 12
+                        radius: 0
                         color: root_pane.alpha(root_pane.surface_color, 0.65)
                         border.width: 1
                         border.color: user_combo.activeFocus
@@ -267,7 +267,7 @@ Rectangle {
                     height: 46
                     focus: true
                     echoMode: TextInput.Password
-                    placeholderText: "Password"
+                    placeholderText: ">> ACCESS CODE_"
                     placeholderTextColor: root_pane.alpha(root_pane.on_surface_color, 0.45)
                     color: root_pane.on_surface_color
                     selectionColor: root_pane.primary_color
@@ -281,7 +281,7 @@ Rectangle {
 
                     background: Rectangle {
                         id: password_bg
-                        radius: 14
+                        radius: 0
                         color: root_pane.alpha(root_pane.surface_color, 0.65)
                         border.width: 1
                         border.color: root_pane.error_text !== ""
@@ -296,7 +296,7 @@ Rectangle {
                     id: login_button
                     width: parent.width
                     height: 44
-                    text: "Sign in"
+                    text: "[ LOGIN ]"
                     font.family: root_pane.font_family
                     font.pixelSize: 15
                     font.weight: Font.Medium
@@ -312,7 +312,7 @@ Rectangle {
 
                     background: Rectangle {
                         id: login_button_bg
-                        radius: 14
+                        radius: 0
                         color: root_pane.alpha(
                             root_pane.primary_color,
                             login_button.down ? 0.75 : (login_button.hovered ? 0.92 : 0.84)
@@ -372,7 +372,7 @@ Rectangle {
                 }
 
                 background: Rectangle {
-                    radius: 14
+                    radius: 0
                     color: root_pane.alpha(root_pane.surface_container_color, 0.65)
                     border.width: 1
                     border.color: session_combo.activeFocus
@@ -385,7 +385,7 @@ Rectangle {
                 id: layout_badge
                 width: 56
                 height: 40
-                radius: 14
+                radius: 0
                 color: root_pane.alpha(
                     root_pane.surface_container_color,
                     layout_mouse.containsMouse ? 0.80 : 0.65
@@ -422,7 +422,7 @@ Rectangle {
                 id: reboot_button
                 width: 120
                 height: 40
-                text: "Reboot"
+                text: "REBOOT"
                 font.family: root_pane.font_family
                 font.pixelSize: 13
                 onClicked: sddm.reboot()
@@ -437,7 +437,7 @@ Rectangle {
 
                 background: Rectangle {
                     id: reboot_bg
-                    radius: 14
+                    radius: 0
                     color: root_pane.alpha(
                         root_pane.surface_container_color,
                         reboot_button.down ? 0.85 : (reboot_button.hovered ? 0.78 : 0.65)
@@ -453,7 +453,7 @@ Rectangle {
                 id: poweroff_button
                 width: 120
                 height: 40
-                text: "Power Off"
+                text: "SHUTDOWN"
                 font.family: root_pane.font_family
                 font.pixelSize: 13
                 onClicked: sddm.powerOff()
@@ -470,7 +470,7 @@ Rectangle {
 
                 background: Rectangle {
                     id: poweroff_bg
-                    radius: 14
+                    radius: 0
                     color: root_pane.alpha(
                         root_pane.surface_container_color,
                         poweroff_button.down ? 0.85 : (poweroff_button.hovered ? 0.78 : 0.65)

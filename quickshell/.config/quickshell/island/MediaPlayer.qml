@@ -12,7 +12,9 @@ Item {
     property string art_url: ""
     property bool is_playing: false
     property real progress_ratio: 0.0
-    property color mask_color: Qt.darker(Colors.surface, 1.5)
+
+    function glitch() { title_neon.glitch(); }
+    onTrack_titleChanged: Qt.callLater(() => { if (visible) glitch(); })
 
     signal previous_requested()
     signal toggle_requested()
@@ -26,9 +28,7 @@ Item {
             verticalCenter: parent.verticalCenter
         }
         cover_size: 64
-        corner_radius: Style.radius_md
         art_url: player_root.art_url
-        mask_color: player_root.mask_color
     }
 
     Item {
@@ -62,23 +62,25 @@ Item {
                 }
                 spacing: 2
 
-                Text {
-                    id: title_text
+                Item {
                     width: parent.width
-                    text: player_root.track_title !== "" ? player_root.track_title : "Музыка"
-                    font.family: Style.font_ui
-                    font.pixelSize: Style.text_md
-                    font.weight: Font.DemiBold
-                    color: Colors.on_surface
-                    elide: Text.ElideRight
-                    maximumLineCount: 1
+                    height: title_neon.implicitHeight
+                    clip: true
+                    NeonText {
+                        id: title_neon
+                        text: player_root.track_title !== "" ? player_root.track_title : "// AUDIO"
+                        color: Colors.cyan
+                        pixel_size: Style.text_md
+                    }
                 }
 
                 Text {
                     id: artist_text
                     width: parent.width
                     text: player_root.artist_name !== "" ? player_root.artist_name : "Неизвестный исполнитель"
-                    font.family: Style.font_ui
+                    font.family: Style.font_hud
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: Style.hud_letter_spacing
                     font.pixelSize: Style.text_sm
                     color: Colors.on_surface_variant
                     elide: Text.ElideRight
@@ -99,7 +101,9 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 28
                     height: 28
-                    radius: Style.radius_pill
+                    radius: 0
+                    border.width: 1
+                    border.color: prev_mouse.containsMouse ? Colors.magenta : Colors.outline
                     color: prev_mouse.pressed
                         ? Style.alpha(Colors.on_surface, Style.press_opacity)
                         : (prev_mouse.containsMouse
@@ -116,7 +120,9 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: "󰒮"
-                        font.family: Style.font_mono
+                        font.family: Style.font_hud
+                        font.capitalization: Font.AllUppercase
+                        font.letterSpacing: Style.hud_letter_spacing
                         font.pixelSize: Style.text_md
                         color: Colors.on_surface
                     }
@@ -135,14 +141,14 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 32
                     height: 32
-                    radius: Style.radius_pill
+                    radius: 0
                     color: play_mouse.pressed
                         ? Style.alpha(Colors.primary, 0.34)
                         : (play_mouse.containsMouse
                             ? Style.alpha(Colors.primary, 0.24)
                             : Style.alpha(Colors.primary, 0.16))
                     border.width: 1
-                    border.color: Style.alpha(Colors.primary, 0.35)
+                    border.color: play_mouse.containsMouse ? Colors.magenta : Colors.cyan
 
                     Behavior on color {
                         ColorAnimation {
@@ -154,7 +160,9 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: player_root.is_playing ? "󰏤" : "󰐊"
-                        font.family: Style.font_mono
+                        font.family: Style.font_hud
+                        font.capitalization: Font.AllUppercase
+                        font.letterSpacing: Style.hud_letter_spacing
                         font.pixelSize: Style.text_lg
                         color: Colors.primary
                     }
@@ -173,7 +181,9 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 28
                     height: 28
-                    radius: Style.radius_pill
+                    radius: 0
+                    border.width: 1
+                    border.color: next_mouse.containsMouse ? Colors.magenta : Colors.outline
                     color: next_mouse.pressed
                         ? Style.alpha(Colors.on_surface, Style.press_opacity)
                         : (next_mouse.containsMouse
@@ -190,7 +200,9 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         text: "󰒭"
-                        font.family: Style.font_mono
+                        font.family: Style.font_hud
+                        font.capitalization: Font.AllUppercase
+                        font.letterSpacing: Style.hud_letter_spacing
                         font.pixelSize: Style.text_md
                         color: Colors.on_surface
                     }
@@ -216,14 +228,14 @@ Item {
                 bottomMargin: 2
             }
             height: 4
-            radius: Style.radius_pill
+            radius: 0
             color: Style.alpha(Colors.surface_variant, 0.75)
 
             Rectangle {
                 id: progress_fill
                 width: Math.max(4, parent.width * Math.max(0.0, Math.min(1.0, player_root.progress_ratio)))
                 height: parent.height
-                radius: Style.radius_pill
+                radius: 0
                 visible: player_root.progress_ratio > 0.001
 
                 gradient: Gradient {

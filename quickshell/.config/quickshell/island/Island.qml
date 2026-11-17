@@ -1,4 +1,4 @@
-// Dynamic top-center desktop island morphing between idle, media player, volume OSD and notifications
+// Neon HUD island morphing between clock, media, volume and notification states
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -18,7 +18,7 @@ Scope {
     // --- Clock ---
     SystemClock {
         id: sys_clock // sys = system
-        precision: SystemClock.Minutes
+        precision: SystemClock.Seconds
     }
 
     // --- Keyboard layout (Hyprland activelayout + initial hyprctl query) ---
@@ -147,7 +147,6 @@ Scope {
     // --- MPRIS Media ---
     readonly property var player_list: Mpris.players ? Mpris.players.values : []
 
-    // Здесь я выбираю активно играющий MPRIS-плеер, а если все на паузе — беру первый доступный
     readonly property var active_player: {
         const list = island_root.player_list;
         if (!list || list.length === 0) {
@@ -264,7 +263,6 @@ Scope {
         return Math.round(island_root.current_notif.expireTimeout * 1000);
     }
 
-    // Здесь я храню очередь в модели сервера: закрытые приложением уведомления исчезают и во время DND.
     NotificationServer {
         id: notif_server
         keepOnReload: false
@@ -393,23 +391,19 @@ Scope {
                 return Style.island_height;
             }
 
-            readonly property int target_radius: {
-                if (island_window.state_mode === "notification" || island_window.state_mode === "player") {
-                    return Style.island_expanded_radius;
-                }
-                if (island_window.state_mode === "volume") {
-                    return 22;
-                }
-                return Math.round(Style.island_height / 2);
-            }
-
-            readonly property color dark_glass_base: Qt.darker(Colors.surface, 1.5)
+            onState_modeChanged: Qt.callLater(() => {
+                if (island_window.state_mode === "notification") notif_layer.glitch();
+                else if (island_window.state_mode === "player") player_layer.glitch();
+                else if (island_window.state_mode === "volume") volume_layer.glitch();
+                else clock_label.glitch();
+            })
 
             function pulse_on_workspace_switch() {
                 island_window.ws_impulse_extra = 26;
                 island_window.ws_pulse_glow = true;
                 ws_recoil_timer.restart();
                 ws_glow_timer.restart();
+                clock_label.glitch();
             }
 
             Timer {
@@ -441,129 +435,24 @@ Scope {
             implicitHeight: Style.island_margin_top + Math.max(Style.island_height, Math.ceil(island_capsule.height)) + Style.space_md
             color: "transparent"
 
-            // Soft layered drop shadow behind the capsule
-            Rectangle {
-                id: shadow_outer
-                x: island_capsule.x - 6
-                y: island_capsule.y - 3
-                width: island_capsule.width + 12
-                height: island_capsule.height + 9
-                radius: island_capsule.radius + 6
-                color: Style.alpha(Colors.shadow, 0.08)
-            }
-
-            Rectangle {
-                id: shadow_mid
-                x: island_capsule.x - 3
-                y: island_capsule.y - 1
-                width: island_capsule.width + 6
-                height: island_capsule.height + 5
-                radius: island_capsule.radius + 3
-                color: Style.alpha(Colors.shadow, 0.16)
-            }
-
-            Rectangle {
-                id: shadow_inner
-                x: island_capsule.x - 1
-                y: island_capsule.y
-                width: island_capsule.width + 2
-                height: island_capsule.height + 2
-                radius: island_capsule.radius + 1
-                color: Style.alpha(Colors.shadow, 0.28)
-            }
-
-            // Subtle primary outer glow halo
-            Rectangle {
-                id: primary_halo
-                anchors {
-                    fill: island_capsule
-                    margins: -1
-                }
-                radius: island_capsule.radius + 1
-                color: "transparent"
-                border.width: 1
-                border.color: island_window.state_mode === "notification" && island_root.current_notif_critical
-                    ? Style.alpha(Colors.error, 0.24)
-                    : Style.alpha(Colors.primary, island_window.ws_pulse_glow ? 0.28 : 0.12)
-
-                Behavior on border.color {
-                    ColorAnimation {
-                        duration: Style.motion_normal
-                        easing.type: Style.easing
-                    }
-                }
-            }
-
-            // Main morphing capsule
-            Rectangle {
+            HudPanel {
                 id: island_capsule
                 anchors.horizontalCenter: parent.horizontalCenter
                 y: Style.island_margin_top
                 width: island_window.target_width
                 height: island_window.target_height
-                radius: island_window.target_radius
-                clip: true
-                color: Style.alpha(island_window.dark_glass_base, Style.island_opacity)
-                border.width: 1
-                border.color: island_window.state_mode === "notification" && island_root.current_notif_critical
-                    ? Style.alpha(Colors.error, 0.60)
-                    : Style.alpha(
-                        Colors.primary,
-                        (island_window.ws_pulse_glow || island_window.state_mode === "player") ? 0.42 : 0.25
-                    )
-
+                cut: Math.min(Style.chamfer, height / 3)
+                brackets: island_window.state_mode !== "compact"
+                fill_opacity: Style.island_opacity
+                accent: island_window.state_mode === "notification" ? Colors.magenta
+                    : (island_window.state_mode === "volume" ? Colors.mint : Colors.cyan)
+                active: island_window.state_mode !== "compact" || island_root.has_media
+                    || island_window.ws_pulse_glow || capsule_hover.hovered
                 Behavior on width {
-                    SpringAnimation {
-                        spring: Style.spring
-                        damping: Style.spring_damping
-                        epsilon: 0.25
-                    }
+                    SpringAnimation { spring: Style.spring; damping: Style.spring_damping; epsilon: 0.25 }
                 }
-
                 Behavior on height {
-                    SpringAnimation {
-                        spring: Style.spring
-                        damping: Style.spring_damping
-                        epsilon: 0.25
-                    }
-                }
-
-                Behavior on radius {
-                    SpringAnimation {
-                        spring: Style.spring
-                        damping: Style.spring_damping
-                        epsilon: 0.25
-                    }
-                }
-
-                Behavior on border.color {
-                    ColorAnimation {
-                        duration: Style.motion_normal
-                        easing.type: Style.easing
-                    }
-                }
-
-                // Subtle top primary sheen inside the dark glass capsule
-                Rectangle {
-                    id: top_sheen
-                    anchors {
-                        top: parent.top
-                        left: parent.left
-                        right: parent.right
-                        margins: 1
-                    }
-                    height: Math.min(20, parent.height * 0.5)
-                    radius: Math.max(0, parent.radius - 1)
-                    gradient: Gradient {
-                        GradientStop {
-                            position: 0.0
-                            color: Style.alpha(Colors.primary, 0.10)
-                        }
-                        GradientStop {
-                            position: 1.0
-                            color: "transparent"
-                        }
-                    }
+                    SpringAnimation { spring: Style.spring; damping: Style.spring_damping; epsilon: 0.25 }
                 }
 
                 HoverHandler {
@@ -587,7 +476,6 @@ Scope {
                     }
                 }
 
-                // 1. Compact state (Покой + compact Музыка играет)
                 Item {
                     id: compact_layer
                     anchors.fill: parent
@@ -637,19 +525,16 @@ Scope {
                                 visible: island_root.has_media
                                 anchors.verticalCenter: parent.verticalCenter
                                 cover_size: 22
-                                corner_radius: 6
                                 art_url: island_root.art_url
-                                mask_color: island_window.dark_glass_base
                             }
 
-                            Text {
+                            NeonText {
                                 id: clock_label
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: Qt.formatTime(sys_clock.date, "HH:mm")
-                                font.family: Style.font_ui
-                                font.pixelSize: Style.text_md
-                                font.weight: Font.DemiBold
+                                text: Qt.formatTime(sys_clock.date, "HH:mm:ss")
+                                pixel_size: Style.text_md
                                 color: Colors.on_surface
+                                glow_color: Colors.cyan
                             }
 
                             Equalizer {
@@ -669,7 +554,9 @@ Scope {
                                 id: layout_text
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: island_root.current_layout
-                                font.family: Style.font_ui
+                                font.family: Style.font_hud
+                                font.capitalization: Font.AllUppercase
+                                font.letterSpacing: Style.hud_letter_spacing
                                 font.pixelSize: Style.text_xs
                                 font.weight: Font.DemiBold
                                 color: Colors.on_surface_variant
@@ -679,7 +566,9 @@ Scope {
                                 id: compact_vol_icon
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: island_root.volume_icon
-                                font.family: Style.font_mono
+                                font.family: Style.font_hud
+                                font.capitalization: Font.AllUppercase
+                                font.letterSpacing: Style.hud_letter_spacing
                                 font.pixelSize: Style.text_md
                                 color: island_root.is_muted ? Colors.on_surface_variant : Colors.on_surface
                             }
@@ -688,7 +577,9 @@ Scope {
                                 id: compact_net_icon
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: island_root.net_icon
-                                font.family: Style.font_mono
+                                font.family: Style.font_hud
+                                font.capitalization: Font.AllUppercase
+                                font.letterSpacing: Style.hud_letter_spacing
                                 font.pixelSize: Style.text_md
                                 color: island_root.is_online ? Colors.on_surface : Colors.on_surface_variant
                             }
@@ -696,7 +587,6 @@ Scope {
                     }
                 }
 
-                // 2. Expanded Media Player state (Музыка играет — hover)
                 MediaPlayer {
                     id: player_layer
                     anchors.fill: parent
@@ -709,7 +599,6 @@ Scope {
                     art_url: island_root.art_url
                     is_playing: island_root.is_playing
                     progress_ratio: island_root.progress_ratio
-                    mask_color: island_window.dark_glass_base
                     onPrevious_requested: island_root.media_previous()
                     onToggle_requested: island_root.media_toggle()
                     onNext_requested: island_root.media_next()
@@ -729,7 +618,7 @@ Scope {
                     }
                 }
 
-                // 3. Volume OSD state (Громкость)
+                // Здесь я сохраняю управление PipeWire внутри мятной сегментной шкалы.
                 VolumeView {
                     id: volume_layer
                     anchors.fill: parent
@@ -765,7 +654,7 @@ Scope {
                     }
                 }
 
-                // 4. Notification card state (Уведомление)
+                // Здесь я показываю очередь уведомлений в карточке с печатью текста.
                 NotificationCard {
                     id: notif_layer
                     anchors.fill: parent

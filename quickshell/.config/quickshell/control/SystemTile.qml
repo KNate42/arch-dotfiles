@@ -1,4 +1,4 @@
-// System monitor bento tile with dual circular gauges for CPU and memory usage polled every 2 seconds
+// CPU and memory telemetry with neon segment meters polled every two seconds
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -102,158 +102,44 @@ BentoTile {
         }
     }
 
+    // Здесь я показываю оба датчика строками, чтобы проценты читались без круглых приборов.
     Column {
-        id: sys_column // sys = system
-        anchors {
-            fill: parent
-            margins: Style.space_md
-        }
-        spacing: Style.space_md
-
-        Row {
-            id: sys_header_row
-            width: parent.width
-            spacing: Style.space_xs
-
-            Text {
-                id: sys_icon
-                anchors.verticalCenter: parent.verticalCenter
-                text: "󰍛"
-                font.family: Style.font_mono
-                font.pixelSize: Style.text_md
-                color: Colors.primary
-            }
-
-            Text {
-                id: sys_title
-                anchors.verticalCenter: parent.verticalCenter
-                text: "Система"
-                font.family: Style.font_ui
-                font.pixelSize: Style.text_sm
-                font.weight: Font.DemiBold
-                color: Colors.on_surface
-            }
-        }
-
-        Row {
-            id: rings_row
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: Style.space_md
-
-            Repeater {
-                id: gauge_model
-                model: 2
-                readonly property var gauge_values: [
-                    {
-                        label: "CPU",
-                        sub: "Процессор",
-                        percent: system_root.cpu_percent,
-                        ring_color: Colors.primary
-                    },
-                    {
-                        label: "ОЗУ",
-                        sub: system_root.mem_detail !== "" ? system_root.mem_detail : "Память",
-                        percent: system_root.mem_percent,
-                        ring_color: Colors.tertiary
-                    }
-                ]
-
-                delegate: Column {
-                    id: gauge_col // col = column
-                    required property int index
-                    readonly property var gauge_data: gauge_model.gauge_values[gauge_col.index]
-
-                    width: (sys_column.width - rings_row.spacing) / 2
-                    spacing: Style.space_xs
-
-                    property real animated_ratio: Math.max(0.0, Math.min(1.0, gauge_col.gauge_data.percent / 100.0))
-
-                    Behavior on animated_ratio {
-                        NumberAnimation {
-                            duration: Style.motion_slow
-                            easing.type: Style.easing
-                        }
-                    }
-
-                    onAnimated_ratioChanged: ring_canvas.requestPaint()
-
-                    Item {
-                        id: ring_box
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        width: Math.min(72, gauge_col.width)
-                        height: width
-
-                        Canvas {
-                            id: ring_canvas
-                            anchors.fill: parent
-
-                            property color active_color: gauge_col.gauge_data.ring_color
-                            property color track_color: Style.alpha(Colors.surface_container_high, 0.95)
-
-                            onActive_colorChanged: ring_canvas.requestPaint()
-                            onTrack_colorChanged: ring_canvas.requestPaint()
-
-                            // Здесь я рисую фоновое и заполненное кольцо прогресса со скруглёнными краями
-                            onPaint: {
-                                const ctx = ring_canvas.getContext("2d"); // ctx = canvas 2d context
-                                ctx.reset();
-                                const cx = ring_canvas.width / 2;
-                                const cy = ring_canvas.height / 2;
-                                const radius = (Math.min(ring_canvas.width, ring_canvas.height) / 2) - 6;
-                                const start_angle = -Math.PI / 2;
-                                const end_angle = start_angle + (Math.PI * 2 * gauge_col.animated_ratio);
-
-                                ctx.lineWidth = 7;
-                                ctx.lineCap = "round";
-
-                                ctx.beginPath();
-                                ctx.arc(cx, cy, radius, 0, Math.PI * 2, false);
-                                ctx.strokeStyle = ring_canvas.track_color;
-                                ctx.stroke();
-
-                                if (gauge_col.animated_ratio > 0.005) {
-                                    ctx.beginPath();
-                                    ctx.arc(cx, cy, radius, start_angle, end_angle, false);
-                                    ctx.strokeStyle = ring_canvas.active_color;
-                                    ctx.stroke();
-                                }
-                            }
-                        }
-
-                        Text {
-                            id: ring_percent_text
-                            anchors.centerIn: parent
-                            text: gauge_col.gauge_data.percent + "%"
-                            font.family: Style.font_mono
-                            font.pixelSize: Style.text_sm
-                            font.weight: Font.Bold
-                            color: Colors.on_surface
-                        }
-                    }
-
-                    Text {
-                        id: gauge_label
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        text: gauge_col.gauge_data.label
-                        font.family: Style.font_ui
-                        font.pixelSize: Style.text_xs
-                        font.weight: Font.DemiBold
-                        color: Colors.on_surface
-                    }
-
-                    Text {
-                        id: gauge_sublabel
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        width: parent.width
-                        horizontalAlignment: Text.AlignHCenter
-                        elide: Text.ElideRight
-                        text: gauge_col.gauge_data.sub
-                        font.family: Style.font_ui
-                        font.pixelSize: 10
-                        color: Colors.on_surface_variant
-                    }
+        id: sys_column
+        x: Style.space_md; y: Style.space_md
+        width: parent.width - Style.space_md * 2
+        spacing: 12
+        NeonText { text: ">> STATUS"; pixel_size: Style.text_xs; color: Colors.mint; spacing: 0.5 }
+        Repeater {
+            model: 2
+            delegate: Column {
+                id: gauge_column
+                required property int index
+                readonly property int percent: index === 0 ? system_root.cpu_percent : system_root.mem_percent
+                readonly property color meter_color: index === 0 ? Colors.cyan : Colors.magenta
+                width: sys_column.width
+                spacing: 5
+                Text {
+                    text: (gauge_column.index === 0 ? "CPU" : "RAM") + " :: " + gauge_column.percent + "%"
+                    font.family: Style.font_hud
+                    font.pixelSize: Style.text_xs
+                    font.letterSpacing: 0.5
+                    color: gauge_column.meter_color
+                }
+                SegmentBar {
+                    width: parent.width
+                    count: 10
+                    value: gauge_column.percent / 100
+                    accent: gauge_column.meter_color
                 }
             }
+        }
+        Text {
+            width: parent.width
+            text: system_root.mem_detail
+            elide: Text.ElideRight
+            font.family: Style.font_hud
+            font.pixelSize: 10
+            color: Colors.on_surface_variant
         }
     }
 }

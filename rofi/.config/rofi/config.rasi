@@ -5,7 +5,7 @@ configuration {
     modi: "drun,run,window";
     show-icons: true;
     icon-theme: "Papirus-Dark";
-    font: "Inter 12";
+    font: "JetBrainsMono Nerd Font 11";
     display-drun: "󰀻  Приложения";
     display-run: "󰆍  Команды";
     display-window: "󰖳  Окна";

@@ -1,4 +1,4 @@
-// Wallpaper picker overlay controlled via IPC and keyboard or mouse
+// HUD wallpaper browser with neon preview frames and keyboard or IPC control
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -22,6 +22,7 @@ Scope {
         picker_root.is_open = !picker_root.is_open;
         if (picker_root.is_open) {
             wall_grid.forceActiveFocus();
+            picker_title.glitch();
         }
     }
 
@@ -77,14 +78,13 @@ Scope {
             }
         }
 
-        Rectangle {
+        HudPanel {
             id: picker_card
             anchors.fill: parent
-            radius: Style.radius_lg
-            color: Style.alpha(Colors.surface, Style.glass_opacity)
-            border.width: 1
-            border.color: Style.alpha(Colors.outline_variant, Style.glass_border_opacity)
+            accent: Colors.cyan
+            active: true
 
+            // Здесь я запускаю сбой заголовка при открытии, не меняя IPC и команду применения.
             Row {
                 id: header_row
                 anchors {
@@ -99,19 +99,19 @@ Scope {
                     id: title_icon
                     anchors.verticalCenter: parent.verticalCenter
                     text: "󰸉"
-                    font.family: Style.font_mono
+                    font.family: Style.font_hud
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: Style.hud_letter_spacing
                     font.pixelSize: Style.text_lg
                     color: Colors.primary
                 }
 
-                Text {
-                    id: title_label
+                NeonText {
+                    id: picker_title
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Обои"
-                    font.family: Style.font_ui
-                    font.pixelSize: Style.text_lg
-                    font.weight: Font.DemiBold
-                    color: Colors.on_surface
+                    text: ">> WALLPAPER.SELECT"
+                    pixel_size: Style.text_lg
+                    color: Colors.cyan
                 }
             }
 
@@ -130,6 +130,7 @@ Scope {
                 clip: true
                 focus: true
                 keyNavigationEnabled: true
+                onCurrentIndexChanged: { if (picker_root.is_open) picker_title.glitch(); }
                 cellWidth: Style.space_xl * 8
                 cellHeight: Style.space_xl * 6
                 model: folder_model
@@ -138,7 +139,7 @@ Scope {
                 Keys.onReturnPressed: picker_root.apply_wallpaper(picker_root.current_file_path)
                 Keys.onEnterPressed: picker_root.apply_wallpaper(picker_root.current_file_path)
 
-                delegate: Rectangle {
+                delegate: HudPanel {
                     id: thumb_delegate // thumb = thumbnail
                     required property int index
                     required property string filePath
@@ -168,28 +169,12 @@ Scope {
 
                     width: Style.space_xl * 8 - Style.space_sm
                     height: Style.space_xl * 6 - Style.space_md
-                    radius: Style.radius_md
-                    color: thumb_delegate.is_selected
-                        ? Style.alpha(Colors.primary_container, Style.glass_opacity)
-                        : Style.alpha(Colors.surface_container_high, Style.glass_opacity)
-                    border.width: 1
-                    border.color: thumb_delegate.is_selected
-                        ? Colors.primary
-                        : Style.alpha(Colors.outline_variant, Style.glass_border_opacity)
-
-                    Behavior on color {
-                        ColorAnimation {
-                            duration: Style.motion_fast
-                            easing.type: Style.easing
-                        }
-                    }
-
-                    Behavior on border.color {
-                        ColorAnimation {
-                            duration: Style.motion_fast
-                            easing.type: Style.easing
-                        }
-                    }
+                    cut: 8
+                    brackets: false
+                    scanlines: false
+                    accent: is_selected ? Colors.magenta : Colors.cyan
+                    active: is_selected || thumb_mouse.containsMouse
+                    // Здесь я отделяю выбранную рамку от наведения, сохраняя выбор с клавиатуры.
 
                     Image {
                         id: thumb_image
@@ -220,9 +205,11 @@ Scope {
                             bottomMargin: Style.space_sm
                         }
                         text: thumb_delegate.fileName
-                        font.family: Style.font_ui
+                        font.family: Style.font_hud
+                        font.capitalization: Font.AllUppercase
+                        font.letterSpacing: Style.hud_letter_spacing
                         font.pixelSize: Style.text_xs
-                        color: thumb_delegate.is_selected ? Colors.on_primary_container : Colors.on_surface
+                        color: thumb_delegate.is_selected ? Colors.magenta : Colors.on_surface
                         elide: Text.ElideMiddle
                         horizontalAlignment: Text.AlignHCenter
                     }
@@ -230,6 +217,7 @@ Scope {
                     MouseArea {
                         id: thumb_mouse
                         anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             wall_grid.currentIndex = thumb_delegate.index;
@@ -243,8 +231,10 @@ Scope {
                 id: empty_label
                 anchors.centerIn: parent
                 visible: folder_model.count === 0
-                text: "No wallpapers found in ~/Pictures/wallpapers"
-                font.family: Style.font_ui
+                text: "// NO WALLPAPERS IN ~/Pictures/wallpapers"
+                font.family: Style.font_hud
+                font.capitalization: Font.AllUppercase
+                font.letterSpacing: Style.hud_letter_spacing
                 font.pixelSize: Style.text_md
                 color: Colors.on_surface_variant
             }

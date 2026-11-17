@@ -1,4 +1,4 @@
-// System tray bento tile with application activation and anchored context menus
+// Neon system tray with application activation and anchored context menus
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -21,8 +21,10 @@ BentoTile {
         spacing: Style.space_sm
 
         Text {
-            text: "Приложения"
-            font.family: Style.font_ui
+            text: "// APPLICATIONS"
+            font.family: Style.font_hud
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: Style.hud_letter_spacing
             font.pixelSize: Style.text_sm
             font.weight: Font.DemiBold
             color: Colors.on_surface_variant
@@ -42,7 +44,9 @@ BentoTile {
                     required property var modelData
                     width: 36
                     height: 36
-                    radius: Style.radius_sm
+                    radius: 0
+                    border.width: 1
+                    border.color: tray_mouse.containsMouse ? Colors.cyan : Colors.outline_variant
                     color: tray_mouse.pressed
                         ? Style.alpha(Colors.primary, Style.press_opacity)
                         : Style.alpha(Colors.on_surface, tray_mouse.containsMouse ? Style.hover_opacity : 0)

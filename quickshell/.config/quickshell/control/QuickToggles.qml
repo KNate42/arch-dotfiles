@@ -1,4 +1,4 @@
-// 2x2 quick settings bento tiles for Wi-Fi, Do Not Disturb, Audio Mute, and Microphone
+// HUD command switches for Wi-Fi, Do Not Disturb, Audio Mute and Microphone
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -102,29 +102,25 @@ Item {
     readonly property var tiles_data: [
         {
             kind: "wifi",
-            title: "Wi-Fi",
-            subtitle: toggles_root.wifi_enabled ? "Включён" : "Выключен",
+            title: "WIFI",
             icon: toggles_root.wifi_enabled ? "󰖩" : "󰖪",
             active: toggles_root.wifi_enabled
         },
         {
             kind: "dnd",
-            title: "Не беспокоить",
-            subtitle: Panels.dnd ? "Включено" : "Выключено",
+            title: "DND",
             icon: Panels.dnd ? "󰂛" : "󰂚",
             active: Panels.dnd
         },
         {
             kind: "mute",
-            title: "Без звука",
-            subtitle: toggles_root.sink_muted ? "Включено" : "Звук вкл",
+            title: "MUTE",
             icon: toggles_root.sink_muted ? "󰝟" : "󰕾",
             active: toggles_root.sink_muted
         },
         {
             kind: "mic",
-            title: "Микрофон",
-            subtitle: toggles_root.source_muted ? "Заглушён" : "Активен",
+            title: "MIC",
             icon: toggles_root.source_muted ? "󰍭" : "󰍬",
             active: !toggles_root.source_muted && toggles_root.has_source
         }
@@ -136,105 +132,35 @@ Item {
         columns: 2
         rowSpacing: Style.tile_gap
         columnSpacing: Style.tile_gap
-
         Repeater {
             model: 4
-
             delegate: BentoTile {
                 id: toggle_card
                 required property int index
-                readonly property var tile_data: toggles_root.tiles_data[toggle_card.index]
-
+                readonly property var tile_data: toggles_root.tiles_data[index]
+                readonly property bool is_active: Boolean(tile_data.active)
                 tile_index: toggles_root.tile_index
-                reveal_delay: toggle_card.index * 25
+                reveal_delay: index * 25
                 width: (toggles_grid.width - Style.tile_gap) / 2
-                height: 68
-
-                readonly property bool is_active: Boolean(toggle_card.tile_data.active)
-
-                color: toggle_card.is_active
-                    ? (card_mouse.pressed
-                        ? Qt.darker(Colors.primary, 1.12)
-                        : (card_mouse.containsMouse ? Qt.lighter(Colors.primary, 1.06) : Colors.primary))
-                    : (card_mouse.pressed
-                        ? Style.alpha(Colors.surface_container_high, 0.95)
-                        : (card_mouse.containsMouse
-                            ? Style.alpha(Colors.surface_container_high, 0.85)
-                            : Style.alpha(Colors.surface_container, 0.78)))
-
-                border.color: toggle_card.is_active
-                    ? Colors.primary
-                    : (card_mouse.containsMouse
-                        ? Style.alpha(Colors.primary, 0.45)
-                        : Style.alpha(Colors.outline_variant, Style.glass_border_opacity))
-
-                Row {
-                    id: card_row
-                    anchors {
-                        fill: parent
-                        leftMargin: Style.space_md
-                        rightMargin: Style.space_md
-                    }
-                    spacing: Style.space_sm
-
-                    Rectangle {
-                        id: icon_circle
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 38
-                        height: 38
-                        radius: Style.radius_pill
-                        color: toggle_card.is_active
-                            ? Style.alpha(Colors.on_primary, 0.16)
-                            : Style.alpha(Colors.surface_container_high, 0.9)
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: Style.motion_fast
-                                easing.type: Style.easing
-                            }
-                        }
-
-                        Text {
-                            id: toggle_icon
-                            anchors.centerIn: parent
-                            text: toggle_card.tile_data.icon
-                            font.family: Style.font_mono
-                            font.pixelSize: 18
-                            color: toggle_card.is_active ? Colors.on_primary : Colors.primary
-                        }
-                    }
-
-                    Column {
-                        id: text_column
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: Math.max(0, parent.width - icon_circle.width - parent.spacing)
-                        spacing: 2
-
-                        Text {
-                            id: toggle_title
-                            width: parent.width
-                            text: toggle_card.tile_data.title
-                            font.family: Style.font_ui
-                            font.pixelSize: Style.text_sm
-                            font.weight: Font.DemiBold
-                            color: toggle_card.is_active ? Colors.on_primary : Colors.on_surface
-                            elide: Text.ElideRight
-                        }
-
-                        Text {
-                            id: toggle_subtitle
-                            width: parent.width
-                            text: toggle_card.tile_data.subtitle
-                            font.family: Style.font_ui
-                            font.pixelSize: Style.text_xs
-                            color: toggle_card.is_active
-                                ? Style.alpha(Colors.on_primary, 0.78)
-                                : Colors.on_surface_variant
-                            elide: Text.ElideRight
-                        }
-                    }
+                height: 52
+                accent: card_mouse.containsMouse ? Colors.mint : Colors.cyan
+                active: is_active || card_mouse.containsMouse
+                onIs_activeChanged: Qt.callLater(() => toggle_card.glitch())
+                // Здесь я кладу заливку внутрь скоса, чтобы включённая команда читалась тёмным текстом.
+                Rectangle {
+                    anchors { fill: parent; margins: 8 }
+                    color: toggle_card.is_active ? Colors.cyan : "transparent"
                 }
-
+                Text {
+                    anchors.centerIn: parent
+                    text: "[ " + toggle_card.tile_data.title + " :: " + (toggle_card.is_active ? "ON" : "OFF") + " ]"
+                    font.family: Style.font_hud
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: 0.5
+                    font.pixelSize: Style.text_xs
+                    font.weight: Font.Bold
+                    color: toggle_card.is_active ? Colors.on_primary : Colors.cyan
+                }
                 MouseArea {
                     id: card_mouse
                     anchors.fill: parent

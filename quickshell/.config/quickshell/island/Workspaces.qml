@@ -1,4 +1,4 @@
-// Monitor-filtered Hyprland workspace dots with gradient active pill and wheel switching
+// Monitor-filtered numbered HUD workspaces with magenta focus and Lua dispatch
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -96,6 +96,7 @@ Item {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.NoButton
+        cursorShape: Qt.PointingHandCursor
         onWheel: wheel => {
             workspaces_root.step_workspace(wheel.angleDelta.y);
             wheel.accepted = true;
@@ -105,85 +106,40 @@ Item {
     Row {
         id: dots_row
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 6
-
+        spacing: 4
         Repeater {
             model: Hyprland.workspaces
-
-            delegate: Rectangle {
-                id: ws_dot
+            delegate: Item {
+                id: ws_slot
                 required property var modelData
-
-                readonly property bool is_special: ws_dot.modelData && ws_dot.modelData.name
-                    ? ws_dot.modelData.name.startsWith("special:")
-                    : false
-                readonly property bool is_active: ws_dot.modelData ? Boolean(ws_dot.modelData.active) : false
-                // Здесь я оставляю на острове только воркспейсы его собственного монитора
-                readonly property bool on_this_monitor: workspaces_root.is_ws_on_monitor(ws_dot.modelData)
-
-                visible: ws_dot.on_this_monitor && !ws_dot.is_special
-                anchors.verticalCenter: parent.verticalCenter
-                width: ws_dot.is_active ? 22 : 7
-                height: 7
-                radius: Style.radius_pill
-
-                gradient: Gradient {
-                    orientation: Gradient.Horizontal
-
-                    GradientStop {
-                        position: 0.0
-                        color: ws_dot.is_active
-                            ? Colors.primary
-                            : (dot_mouse.containsMouse
-                                ? Colors.on_surface
-                                : Style.alpha(Colors.on_surface_variant, 0.50))
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: Style.motion_normal
-                                easing.type: Style.easing
-                            }
-                        }
+                readonly property bool is_special: modelData && modelData.name ? modelData.name.startsWith("special:") : false
+                readonly property bool is_active: modelData ? Boolean(modelData.active) : false
+                visible: workspaces_root.is_ws_on_monitor(modelData) && !is_special
+                width: ws_label.implicitWidth + 6
+                height: 26
+                NeonText {
+                    id: ws_label
+                    anchors.centerIn: parent
+                    text: {
+                        const number = String(ws_slot.modelData ? ws_slot.modelData.id : 0).padStart(2, "0");
+                        return ws_slot.is_active ? "▸[" + number + "]" : number;
                     }
-
-                    GradientStop {
-                        position: 1.0
-                        color: ws_dot.is_active
-                            ? Colors.tertiary
-                            : (dot_mouse.containsMouse
-                                ? Colors.on_surface
-                                : Style.alpha(Colors.on_surface_variant, 0.50))
-
-                        Behavior on color {
-                            ColorAnimation {
-                                duration: Style.motion_normal
-                                easing.type: Style.easing
-                            }
-                        }
-                    }
+                    color: ws_slot.is_active ? Colors.magenta : (dot_mouse.containsMouse ? Colors.cyan : Colors.on_surface_variant)
+                    glow_color: Colors.magenta
+                    glow: ws_slot.is_active
+                    pixel_size: Style.text_sm
+                    spacing: 0.5
                 }
-
-                Behavior on width {
-                    SpringAnimation {
-                        spring: Style.spring
-                        damping: Style.spring_damping
-                        epsilon: 0.2
-                    }
-                }
-
+                // Здесь я подсвечиваю смену фокуса, не меняя фильтрацию по монитору.
+                onIs_activeChanged: Qt.callLater(() => { if (is_active) ws_label.glitch(); })
                 MouseArea {
                     id: dot_mouse
-                    anchors {
-                        fill: parent
-                        margins: -3
-                    }
+                    anchors.fill: parent
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: {
-                        if (ws_dot.modelData) {
-                            // Здесь я передаю фокус воркспейса в Lua-синтаксисе Hyprland 0.57
-                            Hyprland.dispatch("hl.dsp.focus({ workspace = " + ws_dot.modelData.id + " })");
-                        }
+                        if (ws_slot.modelData)
+                            Hyprland.dispatch("hl.dsp.focus({ workspace = " + ws_slot.modelData.id + " })");
                     }
                     onWheel: wheel => {
                         workspaces_root.step_workspace(wheel.angleDelta.y);

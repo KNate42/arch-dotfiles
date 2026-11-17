@@ -1,4 +1,4 @@
-// Fullscreen glass power menu overlay with keyboard navigation and IPC toggle
+// Fullscreen HUD power console with keyboard navigation and IPC toggle
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -16,10 +16,10 @@ Scope {
     property var target_screen: null
 
     readonly property var actions_model: [
-        { label: "Блокировка", icon: "󰌾", kind: "lock" },
-        { label: "Выход", icon: "󰍃", kind: "logout" },
-        { label: "Перезагрузка", icon: "󰜉", kind: "reboot" },
-        { label: "Выключение", icon: "󰐥", kind: "poweroff" }
+        { label: "LOCK", icon: "󰌾", kind: "lock" },
+        { label: "LOGOUT", icon: "󰍃", kind: "logout" },
+        { label: "REBOOT", icon: "󰜉", kind: "reboot" },
+        { label: "SHUTDOWN", icon: "󰐥", kind: "poweroff" }
     ]
 
     // Здесь я нахожу экран, на котором сейчас фокус Hyprland, чтобы открыть меню именно на нём
@@ -45,6 +45,7 @@ Scope {
         power_root.selected_index = 0;
         power_root.target_screen = power_root.find_focused_screen();
         power_root.is_open = true;
+        Qt.callLater(() => power_title.glitch());
         key_catcher.forceActiveFocus();
     }
 
@@ -163,7 +164,7 @@ Scope {
             Rectangle {
                 id: backdrop_dim
                 anchors.fill: parent
-                color: Style.alpha(Colors.shadow, 0.35)
+                color: Style.alpha(Colors.shadow, 0.60)
                 opacity: power_root.is_open ? 1.0 : 0.0
 
                 Behavior on opacity {
@@ -180,115 +181,83 @@ Scope {
                 }
             }
 
-            Rectangle {
+            HudPanel {
                 id: power_card
                 anchors.centerIn: parent
-                width: buttons_row.implicitWidth + Style.space_xl * 2
-                height: buttons_row.implicitHeight + Style.space_xl * 2
-                radius: Style.radius_lg
-                color: Style.alpha(Colors.surface, Style.glass_opacity)
-                border.width: 1
-                border.color: Style.alpha(Colors.outline_variant, Style.glass_border_opacity)
-                opacity: power_root.is_open ? 1.0 : 0.0
-                scale: power_root.is_open ? 1.0 : 0.96
-
-                Behavior on opacity {
-                    NumberAnimation {
-                        duration: Style.motion_normal
-                        easing.type: Style.easing
-                    }
-                }
-
-                Behavior on scale {
-                    NumberAnimation {
-                        duration: Style.motion_normal
-                        easing.type: Style.easing
-                    }
-                }
-
-                MouseArea {
-                    id: card_blocker
-                    anchors.fill: parent
-                }
-
-                Row {
-                    id: buttons_row
-                    anchors.centerIn: parent
+                width: Math.min(660, Math.max(0, parent.width - 32))
+                height: power_content.implicitHeight + Style.space_xl * 2
+                accent: Colors.cyan
+                active: true
+                opacity: power_root.is_open ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: Style.motion_fast } }
+                MouseArea { anchors.fill: parent }
+                Column {
+                    id: power_content
+                    x: Style.space_xl; y: Style.space_xl
+                    width: parent.width - Style.space_xl * 2
                     spacing: Style.space_lg
-
-                    Repeater {
-                        model: power_root.actions_model
-
-                        delegate: Rectangle {
-                            id: action_button
-                            required property var modelData
-                            required property int index
-
-                            readonly property bool is_selected: power_root.selected_index === action_button.index
-
-                            width: Style.space_xl * 5
-                            height: Style.space_xl * 5
-                            radius: Style.radius_md
-                            color: button_mouse.pressed
-                                ? Style.alpha(Colors.primary, Style.press_opacity)
-                                : (action_button.is_selected
-                                    ? Style.alpha(Colors.primary, Style.hover_opacity)
-                                    : (button_mouse.containsMouse
-                                        ? Style.alpha(Colors.on_surface, Style.hover_opacity)
-                                        : Style.alpha(Colors.on_surface, 0.0)))
-                            border.width: 1
-                            border.color: action_button.is_selected
-                                ? Colors.primary
-                                : Style.alpha(Colors.outline_variant, Style.glass_border_opacity)
-
-                            Behavior on color {
-                                ColorAnimation {
-                                    duration: Style.motion_fast
-                                    easing.type: Style.easing
+                    NeonText {
+                        id: power_title
+                        text: ">> POWER.MENU"
+                        color: Colors.cyan
+                        pixel_size: Style.text_lg
+                        split: true
+                    }
+                    // Здесь я переношу кнопки на узком мониторе, сохраняя клавиатурный порядок.
+                    Flow {
+                        width: parent.width
+                        spacing: Style.space_md
+                        Repeater {
+                            model: power_root.actions_model
+                            delegate: HudPanel {
+                                id: action_button
+                                required property var modelData
+                                required property int index
+                                readonly property bool is_selected: power_root.selected_index === index
+                                width: (power_content.width - Style.space_md * (power_content.width < 460 ? 1 : 3))
+                                    / (power_content.width < 460 ? 2 : 4)
+                                height: 116
+                                accent: is_selected ? Colors.magenta : Colors.cyan
+                                active: is_selected || button_mouse.containsMouse
+                                Column {
+                                    anchors.centerIn: parent
+                                    spacing: Style.space_sm
+                                    NeonText {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        text: action_button.modelData.icon
+                                        pixel_size: 28
+                                        color: action_button.accent
+                                        glow_color: action_button.accent
+                                    }
+                                    NeonText {
+                                        id: button_label
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        text: action_button.modelData.label
+                                        pixel_size: Style.text_xs
+                                        spacing: 0.5
+                                        color: action_button.is_selected ? Colors.magenta : Colors.on_surface
+                                        glow_color: action_button.accent
+                                    }
                                 }
-                            }
-
-                            Behavior on border.color {
-                                ColorAnimation {
-                                    duration: Style.motion_fast
-                                    easing.type: Style.easing
+                                onIs_selectedChanged: Qt.callLater(() => { if (is_selected) button_label.glitch(); })
+                                MouseArea {
+                                    id: button_mouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onEntered: power_root.selected_index = action_button.index
+                                    onClicked: power_root.trigger_action(action_button.index)
                                 }
-                            }
-
-                            Column {
-                                id: button_column
-                                anchors.centerIn: parent
-                                spacing: Style.space_sm
-
-                                Text {
-                                    id: button_icon
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    text: action_button.modelData.icon
-                                    font.family: Style.font_mono
-                                    font.pixelSize: 28
-                                    color: action_button.is_selected ? Colors.primary : Colors.on_surface
-                                }
-
-                                Text {
-                                    id: button_label
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    text: action_button.modelData.label
-                                    font.family: Style.font_ui
-                                    font.pixelSize: Style.text_md
-                                    font.weight: action_button.is_selected ? Font.DemiBold : Font.Medium
-                                    color: action_button.is_selected ? Colors.on_surface : Colors.on_surface_variant
-                                }
-                            }
-
-                            MouseArea {
-                                id: button_mouse
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onEntered: power_root.selected_index = action_button.index
-                                onClicked: power_root.trigger_action(action_button.index)
                             }
                         }
+                    }
+                    Text {
+                        text: "[ ← → ] SELECT  //  [ ENTER ] EXEC  //  [ ESC ] ABORT"
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        font.family: Style.font_hud
+                        font.pixelSize: Style.text_xs
+                        color: Colors.mint
                     }
                 }
             }

@@ -1,4 +1,4 @@
-// MPRIS media player bento tile with blurred full-width backdrop art, 72px cover, progress bar, and controls
+// MPRIS HUD player with framed cover, transport buttons and neon gradient progress
 // This work made by Anfinogentov Nikita
 
 import QtQuick
@@ -10,7 +10,6 @@ BentoTile {
     tile_index: 3
     visible: media_root.active_player !== null
     implicitHeight: media_root.active_player !== null ? 178 : 0
-    clip: true
 
     readonly property var player_list: Mpris.players ? Mpris.players.values : []
 
@@ -111,28 +110,7 @@ BentoTile {
         }
     }
 
-    // Здесь я растягиваю уменьшенную до 20x20 текстуру обложки с билинейным сглаживанием, получая мягкое размытие фона
-    Image {
-        id: blurred_backdrop_art
-        anchors.fill: parent
-        anchors.margins: 1
-        visible: media_root.has_art
-        source: media_root.art_url
-        fillMode: Image.PreserveAspectCrop
-        sourceSize.width: 20
-        sourceSize.height: 20
-        smooth: true
-        asynchronous: true
-        opacity: 0.55
-    }
-
-    Rectangle {
-        id: backdrop_scrim
-        anchors.fill: parent
-        radius: Style.tile_radius
-        color: Style.alpha(Colors.surface_container, media_root.has_art ? 0.68 : 0.25)
-    }
-
+    // Здесь я оставляю обложку только в рамке, чтобы телеметрия читалась на тёмном фоне.
     Column {
         id: media_content
         anchors {
@@ -147,20 +125,19 @@ BentoTile {
             height: 72
             spacing: Style.space_md
 
-            Rectangle {
+            HudPanel {
                 id: cover_frame
                 width: 72
                 height: 72
-                radius: Style.radius_md
-                color: Style.alpha(Colors.primary_container, 0.85)
-                border.width: 1
-                border.color: Style.alpha(Colors.outline_variant, Style.glass_border_opacity)
-                clip: true
+                cut: 8
+                accent: Colors.magenta
+                active: true
+                brackets: false
 
                 Image {
                     id: cover_sharp
                     anchors.fill: parent
-                    anchors.margins: 1
+                    anchors.margins: 8
                     visible: media_root.has_art
                     source: media_root.art_url
                     fillMode: Image.PreserveAspectCrop
@@ -175,7 +152,9 @@ BentoTile {
                     anchors.centerIn: parent
                     visible: !media_root.has_art || cover_sharp.status !== Image.Ready
                     text: "󰎆"
-                    font.family: Style.font_mono
+                    font.family: Style.font_hud
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: Style.hud_letter_spacing
                     font.pixelSize: 28
                     color: Colors.primary
                 }
@@ -191,7 +170,9 @@ BentoTile {
                     id: title_text
                     width: parent.width
                     text: media_root.track_title
-                    font.family: Style.font_ui
+                    font.family: Style.font_hud
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: Style.hud_letter_spacing
                     font.pixelSize: Style.text_md
                     font.weight: Font.DemiBold
                     color: Colors.on_surface
@@ -203,7 +184,9 @@ BentoTile {
                     id: artist_text
                     width: parent.width
                     text: media_root.artist_name
-                    font.family: Style.font_ui
+                    font.family: Style.font_hud
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: Style.hud_letter_spacing
                     font.pixelSize: Style.text_sm
                     color: Colors.on_surface_variant
                     elide: Text.ElideRight
@@ -222,17 +205,22 @@ BentoTile {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 32
                 height: 32
-                radius: Style.radius_pill
+                radius: 0
                 color: prev_mouse.pressed
                     ? Style.alpha(Colors.on_surface, Style.press_opacity)
                     : (prev_mouse.containsMouse
                         ? Style.alpha(Colors.on_surface, Style.hover_opacity)
                         : Style.alpha(Colors.surface_container_high, 0.65))
 
+                border.width: 1
+                border.color: prev_mouse.containsMouse ? Colors.magenta : Colors.cyan
+
                 Text {
                     anchors.centerIn: parent
                     text: "󰒮"
-                    font.family: Style.font_mono
+                    font.family: Style.font_hud
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: Style.hud_letter_spacing
                     font.pixelSize: Style.text_md
                     color: Colors.on_surface
                 }
@@ -255,7 +243,7 @@ BentoTile {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 38
                 height: 38
-                radius: Style.radius_pill
+                radius: 0
                 color: play_mouse.pressed
                     ? Qt.darker(Colors.primary, 1.12)
                     : (play_mouse.containsMouse ? Qt.lighter(Colors.primary, 1.08) : Colors.primary)
@@ -267,10 +255,15 @@ BentoTile {
                     }
                 }
 
+                border.width: 1
+                border.color: play_mouse.containsMouse ? Colors.magenta : Colors.cyan
+
                 Text {
                     anchors.centerIn: parent
                     text: media_root.is_playing ? "󰏤" : "󰐊"
-                    font.family: Style.font_mono
+                    font.family: Style.font_hud
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: Style.hud_letter_spacing
                     font.pixelSize: Style.text_lg
                     color: Colors.on_primary
                 }
@@ -289,17 +282,22 @@ BentoTile {
                 anchors.verticalCenter: parent.verticalCenter
                 width: 32
                 height: 32
-                radius: Style.radius_pill
+                radius: 0
                 color: next_mouse.pressed
                     ? Style.alpha(Colors.on_surface, Style.press_opacity)
                     : (next_mouse.containsMouse
                         ? Style.alpha(Colors.on_surface, Style.hover_opacity)
                         : Style.alpha(Colors.surface_container_high, 0.65))
 
+                border.width: 1
+                border.color: next_mouse.containsMouse ? Colors.magenta : Colors.cyan
+
                 Text {
                     anchors.centerIn: parent
                     text: "󰒭"
-                    font.family: Style.font_mono
+                    font.family: Style.font_hud
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: Style.hud_letter_spacing
                     font.pixelSize: Style.text_md
                     color: Colors.on_surface
                 }
@@ -327,7 +325,7 @@ BentoTile {
                 id: progress_track
                 width: parent.width
                 height: 6
-                radius: Style.radius_pill
+                radius: 0
                 color: Style.alpha(Colors.surface_container_high, 0.9)
 
                 Rectangle {
@@ -338,8 +336,12 @@ BentoTile {
                         bottom: parent.bottom
                     }
                     width: media_root.progress_ratio * parent.width
-                    radius: Style.radius_pill
-                    color: Colors.primary
+                    radius: 0
+                    gradient: Gradient {
+                        orientation: Gradient.Horizontal
+                        GradientStop { position: 0; color: Colors.cyan }
+                        GradientStop { position: 1; color: Colors.magenta }
+                    }
 
                     Behavior on width {
                         NumberAnimation {
@@ -372,7 +374,9 @@ BentoTile {
                     id: pos_label // pos = position
                     anchors.left: parent.left
                     text: media_root.format_seconds(media_root.track_position)
-                    font.family: Style.font_mono
+                    font.family: Style.font_hud
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: Style.hud_letter_spacing
                     font.pixelSize: Style.text_xs
                     color: Colors.on_surface_variant
                 }
@@ -383,7 +387,9 @@ BentoTile {
                     text: media_root.track_length > 0
                         ? media_root.format_seconds(media_root.track_length)
                         : "--:--"
-                    font.family: Style.font_mono
+                    font.family: Style.font_hud
+                    font.capitalization: Font.AllUppercase
+                    font.letterSpacing: Style.hud_letter_spacing
                     font.pixelSize: Style.text_xs
                     color: Colors.on_surface_variant
                 }

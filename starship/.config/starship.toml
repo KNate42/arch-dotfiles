@@ -3,7 +3,7 @@
 
 "$schema" = "https://starship.rs/config-schema.json"
 
-# Здесь я рисую приглашение отдельными цветными «таблетками»: каждая появляется, только когда ей есть что показать
+# Здесь я рисую приглашение отдельными неоновыми сегментами со скошенными краями, как панели HUD: каждая появляется, только когда ей есть что показать
 add_newline = true
 format = """
 $os$directory$git_branch$git_status$python$nodejs$rust$java$docker_context$fill$cmd_duration$time
@@ -11,13 +11,13 @@ $character"""
 
 [os]
 disabled = false
-format = "[](fg:blue)[$symbol ](fg:black bg:blue)"
+format = "[](fg:blue)[$symbol ](fg:black bg:blue)"
 
 [os.symbols]
 Arch = "󰣇"
 
 [directory]
-format = "[$path ](fg:black bg:blue)[](fg:blue) "
+format = "[$path ](fg:black bg:blue)[](fg:blue) "
 truncation_length = 3
 truncate_to_repo = true
 truncation_symbol = "…/"
@@ -27,30 +27,30 @@ truncation_symbol = "…/"
 
 [git_branch]
 symbol = ""
-format = "[](fg:purple)[ $symbol $branch ](fg:black bg:purple)[](fg:purple) "
+format = "[](fg:purple)[ $symbol $branch ](fg:black bg:purple)[](fg:purple) "
 
 [git_status]
-format = "([](fg:red)[ $all_status$ahead_behind ](fg:black bg:red)[](fg:red) )"
+format = "([](fg:red)[ $all_status$ahead_behind ](fg:black bg:red)[](fg:red) )"
 
 [python]
 symbol = ""
-format = "[](fg:cyan)[ $symbol $version ](fg:black bg:cyan)[](fg:cyan) "
+format = "[](fg:cyan)[ $symbol $version ](fg:black bg:cyan)[](fg:cyan) "
 
 [nodejs]
 symbol = ""
-format = "[](fg:cyan)[ $symbol $version ](fg:black bg:cyan)[](fg:cyan) "
+format = "[](fg:cyan)[ $symbol $version ](fg:black bg:cyan)[](fg:cyan) "
 
 [rust]
 symbol = ""
-format = "[](fg:cyan)[ $symbol $version ](fg:black bg:cyan)[](fg:cyan) "
+format = "[](fg:cyan)[ $symbol $version ](fg:black bg:cyan)[](fg:cyan) "
 
 [java]
 symbol = ""
-format = "[](fg:cyan)[ $symbol $version ](fg:black bg:cyan)[](fg:cyan) "
+format = "[](fg:cyan)[ $symbol $version ](fg:black bg:cyan)[](fg:cyan) "
 
 [docker_context]
 symbol = ""
-format = "[](fg:cyan)[ $symbol $context ](fg:black bg:cyan)[](fg:cyan) "
+format = "[](fg:cyan)[ $symbol $context ](fg:black bg:cyan)[](fg:cyan) "
 
 [fill]
 symbol = " "
