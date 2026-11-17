@@ -1,7 +1,8 @@
-// Neon text: glow halo, optional chromatic split (cyan/magenta copies) and a short glitch jitter
+// Neon text: soft blurred glow, optional chromatic split for large text and a short glitch jitter
 // This work made by Anfinogentov Nikita
 
 import QtQuick
+import QtQuick.Effects
 
 Item {
     id: neon_root
@@ -25,51 +26,28 @@ Item {
         glitch_anim.restart();
     }
 
-    // Ореол из нескольких полупрозрачных копий со сдвигом во все стороны
-    Repeater {
-        model: neon_root.glow ? [[-1, 0], [1, 0], [0, -1], [0, 1], [-2, 0], [2, 0]] : []
-
-        delegate: Text {
-            required property var modelData
-            x: modelData[0]
-            y: modelData[1]
-            text: neon_root.text
-            color: Style.alpha(neon_root.glow_color, 0.22)
-            font.family: neon_root.family
-            font.pixelSize: neon_root.pixel_size
-            font.weight: neon_root.weight
-            font.capitalization: neon_root.caps ? Font.AllUppercase : Font.MixedCase
-            font.letterSpacing: neon_root.spacing
-            font.features: { "tnum": 1 }
-        }
-    }
+    // Расслоение цвета имеет смысл только на крупном тексте: на мелком оно выглядит как плохо отрисованный шрифт
+    readonly property bool split_on: neon_root.split && neon_root.pixel_size >= 40
+    readonly property real split_shift: Math.max(1, Math.round(neon_root.pixel_size / 60))
 
     Text {
         id: split_cyan
-        visible: neon_root.split
-        x: -2
-        color: Style.alpha(Colors.cyan, 0.75)
+        visible: neon_root.split_on
+        x: -neon_root.split_shift
+        color: Style.alpha(Colors.cyan, 0.55)
         text: neon_root.text
-        font.family: neon_root.family
-        font.pixelSize: neon_root.pixel_size
-        font.weight: neon_root.weight
-        font.capitalization: neon_root.caps ? Font.AllUppercase : Font.MixedCase
-        font.letterSpacing: neon_root.spacing
-        font.features: { "tnum": 1 }
+        font: main_text.font
+        renderType: Text.QtRendering
     }
 
     Text {
         id: split_magenta
-        visible: neon_root.split
-        x: 2
-        color: Style.alpha(Colors.magenta, 0.75)
+        visible: neon_root.split_on
+        x: neon_root.split_shift
+        color: Style.alpha(Colors.magenta, 0.55)
         text: neon_root.text
-        font.family: neon_root.family
-        font.pixelSize: neon_root.pixel_size
-        font.weight: neon_root.weight
-        font.capitalization: neon_root.caps ? Font.AllUppercase : Font.MixedCase
-        font.letterSpacing: neon_root.spacing
-        font.features: { "tnum": 1 }
+        font: main_text.font
+        renderType: Text.QtRendering
     }
 
     Text {
@@ -82,6 +60,18 @@ Item {
         font.capitalization: neon_root.caps ? Font.AllUppercase : Font.MixedCase
         font.letterSpacing: neon_root.spacing
         font.features: { "tnum": 1 }
+        // Здесь я оставляю обычную отрисовку шрифта: копии со сдвигом делали контуры мутными
+        renderType: Text.NativeRendering
+        layer.enabled: neon_root.glow
+        layer.effect: MultiEffect {
+            shadowEnabled: true
+            shadowColor: Style.alpha(neon_root.glow_color, 0.85)
+            shadowBlur: neon_root.pixel_size >= 40 ? 0.9 : 0.55
+            shadowScale: 1.0
+            shadowHorizontalOffset: 0
+            shadowVerticalOffset: 0
+            blurMax: neon_root.pixel_size >= 40 ? 32 : 12
+        }
     }
 
     SequentialAnimation {
