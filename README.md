@@ -32,7 +32,6 @@ setfont cyr-sun16
 
 Без неё русские сообщения установщика (в том числе предупреждение о стирании диска) будут квадратиками. Шрифт `cyr-sun16` из пакета kbd (Arch Wiki: Linux console#Fonts). `install.sh` и сам ставит этот шрифт, если запущен в консоли, но первые строки лучше видеть сразу. Раскладку менять не нужно: где скрипт просит ввести «да», можно ввести `yes`.
 
-> **Адрес репозитория — для владельца:** в командах ниже вместо `<адрес репозитория>` подставьте адрес после публикации на GitHub. Сейчас его ещё нет.
 
 ### Вариант 1. Через archinstall (рекомендую)
 
@@ -41,7 +40,7 @@ setfont cyr-sun16
 
 ```bash
 sudo pacman -S --needed git
-git clone <адрес репозитория> ~/arch-dotfiles
+git clone https://github.com/KNate42/arch-dotfiles.git ~/arch-dotfiles
 cd ~/arch-dotfiles
 ./install.sh
 ```
@@ -56,7 +55,7 @@ cd ~/arch-dotfiles
 
 ```bash
 pacman -Sy git
-git clone <адрес репозитория>
+git clone https://github.com/KNate42/arch-dotfiles.git
 cd arch-dotfiles
 ./install.sh --from-iso
 ```
