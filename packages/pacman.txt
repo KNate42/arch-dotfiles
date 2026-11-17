@@ -33,6 +33,7 @@ rofi
 kitty
 fish
 starship
+fastfetch
 
 # Скриншоты, буфер обмена, уведомления
 grim

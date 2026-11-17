@@ -10,3 +10,4 @@ gtk
 nvim
 scripts
 vscode
+fastfetch
