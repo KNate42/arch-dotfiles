@@ -88,6 +88,7 @@ python
 python-pip
 postgresql
 rustup
+openai-codex
 
 # Java: все поддерживаемые версии, по умолчанию 21 (переключение — archlinux-java)
 jdk-openjdk
