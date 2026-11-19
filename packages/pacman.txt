@@ -101,3 +101,6 @@ thunar
 thunar-archive-plugin
 file-roller
 telegram-desktop
+
+# Игры (нативный Steam: во Flatpak-версии игры не видят драйвер Nvidia, 19.11.2026)
+steam
