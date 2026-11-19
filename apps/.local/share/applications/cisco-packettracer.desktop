@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Cisco Packet Tracer
+Comment=Network simulator by Cisco
+Type=Application
+Categories=Education;
+TryExec=/usr/lib/packettracer/packettracer.AppImage
+Exec=/usr/lib/packettracer/packettracer.AppImage %f
+Icon=cisco-packettracer
+Terminal=false
+StartupNotify=true
+MimeType=application/x-pkt;application/x-pka;application/x-pkz;application/x-pks;application/x-pksz;

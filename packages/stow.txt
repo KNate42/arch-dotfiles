@@ -12,3 +12,4 @@ scripts
 vscode
 fastfetch
 thunar
+apps
