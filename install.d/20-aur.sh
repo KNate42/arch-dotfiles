@@ -55,12 +55,50 @@ main() {
         oops "ни один пакет из AUR не одобрен"
         return 1
     fi
-    say "ставлю из AUR: ${approved[*]}"
-    # PKGBUILD уже показан выше, поэтому второй раз yay его не показывает
-    run_cmd yay -S --needed --noconfirm --answerdiff None --answerclean None "${approved[@]}"
-    if (( ${#approved[@]} < ${#missing[@]} )); then
+
+    local regular=()
+    local failed=0
+    for pkg in "${approved[@]}"; do
+        if [[ -f "$review_dir/$pkg/PKGBUILD" ]] && grep -q 'local://' "$review_dir/$pkg/PKGBUILD"; then
+            build_local "$pkg" || failed=1
+        else
+            regular+=("$pkg")
+        fi
+    done
+
+    if (( ${#regular[@]} > 0 )); then
+        say "ставлю из AUR: ${regular[*]}"
+        # PKGBUILD уже показан выше, поэтому второй раз yay его не показывает
+        run_cmd yay -S --needed --noconfirm --answerdiff None --answerclean None "${regular[@]}"
+    fi
+    if (( failed == 1 || ${#approved[@]} < ${#missing[@]} )); then
         return 1
     fi
+}
+
+# Здесь я собираю пакет, чей исходник скачивается только руками (Packet Tracer — после входа на NetAcad):
+# файл берётся из ~/Downloads, а без него пакет пропускается и не мешает остальным
+build_local() {
+    local pkg="$1"
+    local dir="$review_dir/$pkg"
+    local file
+    local url
+    local lost=()
+    url="$(sed -n 's/^url=["'\'']\{0,1\}\([^"'\'']*\).*/\1/p' "$dir/PKGBUILD" | head -1)"
+    while read -r file; do
+        if [[ -f "$HOME/Downloads/$file" ]]; then
+            cp "$HOME/Downloads/$file" "$dir/"
+        else
+            lost+=("$file")
+        fi
+    done < <(grep -o 'local://[^"'\'' )]*' "$dir/PKGBUILD" | sed 's|local://||' | sort -u)
+
+    if (( ${#lost[@]} > 0 )); then
+        warn "пропускаю $pkg: положите в ~/Downloads ${lost[*]} (скачать: $url) и запустите ./install.sh --only 20-aur"
+        return 1
+    fi
+    say "собираю $pkg из файла в ~/Downloads"
+    (cd "$dir" && run_cmd makepkg -si --needed --noconfirm)
 }
 
 main

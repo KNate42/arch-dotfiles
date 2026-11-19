@@ -1,5 +1,7 @@
 # Пакеты из AUR. Ставятся через yay после 15-yay.sh.
 # Имена сверены с aur.archlinux.org (RPC v5) 16.11.2026.
+# packettracer собирается из .deb, который Cisco отдаёт после входа на netacad.com: файл положить в ~/Downloads.
 
 bibata-cursor-theme-bin
 visual-studio-code-bin
+packettracer
