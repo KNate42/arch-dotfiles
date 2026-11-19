@@ -9,6 +9,10 @@ local tv_audio = (os.getenv("HOME") or "") .. "/.local/bin/tv-audio"
 -- Любой монитор без своего правила: родное разрешение, справа от остальных
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = 0.9375 })
 
+-- Здесь я отдаю X11-программам (ONLYOFFICE и др.) родные пиксели: при дробном масштабе
+-- Hyprland ужимает их картинку, и текст становится мыльным
+hl.config({ xwayland = { force_zero_scaling = true } })
+
 hl.monitor({ output = "desc:" .. tv_desc, mode = "preferred", position = "auto-right", scale = 1 })
 
 for _, ws in ipairs(tv_workspaces) do
