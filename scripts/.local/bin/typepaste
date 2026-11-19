@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Types the clipboard text key by key into the focused window, for fields that block pasting.
+# Hyprland calls it on Ctrl+Alt+V; pressing Ctrl+Alt+V again while it types stops it.
+# This work made by Anfinogentov Nikita
+#
+# typepaste [-d ms] [-b chars] [-a seconds]
+#   -d  pause after every key in ms (default 0)
+#   -b  20 ms breather every N chars, 0 = off (default 100); long texts arrive scrambled without it
+#   -a  wait N seconds before typing (to click into the field when run from a terminal)
+
+set -euo pipefail
+
+delay=0
+burst=100
+after=0
+while getopts "d:b:a:" opt; do
+    case "$opt" in
+        d) delay="$OPTARG" ;;
+        b) burst="$OPTARG" ;;
+        a) after="$OPTARG" ;;
+        *) echo "usage: typepaste [-d ms] [-b chars] [-a seconds]" >&2; exit 2 ;;
+    esac
+done
+
+lock="${XDG_RUNTIME_DIR:-/tmp}/typepaste.pid"
+
+# Здесь я делаю второй Ctrl+Alt+V остановкой: если печать уже идёт, гашу её и выхожу
+if [[ -f "$lock" ]] && old="$(<"$lock")" && kill -0 "$old" 2>/dev/null \
+    && [[ "$(ps -o args= -p "$old")" == *typepaste* ]]; then
+    kill "$old"
+    exit 0
+fi
+echo $$ > "$lock"
+trap 'rm -f "$lock"' EXIT
+
+note() {
+    notify-send -a typepaste "typepaste" "$1" 2>/dev/null || echo "typepaste: $1" >&2
+}
+
+if ! text="$(wl-paste --no-newline --type text 2>/dev/null)" || [[ -z "$text" ]]; then
+    note "The clipboard has no text"
+    exit 1
+fi
+
+# Windows line breaks become plain ones; trailing breaks go away so the form is not sent by Enter
+text="${text//$'\r'/}"
+while [[ "$text" == *$'\n' ]]; do
+    text="${text%$'\n'}"
+done
+
+(( after > 0 )) && sleep "$after"
+# the bind fires on key release, still a short wait so Ctrl and Alt are surely up
+sleep 0.15
+
+# wtype refuses -d 0, so the pause flag goes only when it is set
+pause=()
+(( delay > 0 )) && pause=(-d "$delay")
+step=${#text}
+(( burst > 0 )) && step=$burst
+for (( i = 0; i < ${#text}; i += step )); do
+    wtype "${pause[@]}" -- "${text:i:step}"
+    (( burst > 0 )) && sleep 0.02
+done

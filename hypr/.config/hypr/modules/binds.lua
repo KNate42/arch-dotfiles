@@ -27,6 +27,8 @@ hl.bind(key("V"), hl.dsp.exec_cmd("cliphist list | rofi -dmenu -p clipboard -the
 hl.bind(key("SHIFT + E"), hl.dsp.exec_cmd("qs ipc call power toggle"))
 hl.bind(key("CTRL + SHIFT + E"), hl.dsp.exit())
 hl.bind("Print", hl.dsp.exec_cmd(bin_dir .. "screenshot-area"))
+-- Здесь я печатаю буфер по символу там, где вставка запрещена; повторное нажатие останавливает печать
+hl.bind("CTRL + ALT + V", hl.dsp.exec_cmd(bin_dir .. "typepaste"), { release = true })
 
 -- Здесь я делаю фокус и перенос окон в стиле vim: H/J/K/L = влево/вниз/вверх/вправо
 local directions = { H = "left", J = "down", K = "up", L = "right" }

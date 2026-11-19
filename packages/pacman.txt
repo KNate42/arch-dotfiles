@@ -40,6 +40,7 @@ grim
 slurp
 wl-clipboard
 cliphist
+wtype
 libnotify
 
 # Темы, иконки, шрифты
